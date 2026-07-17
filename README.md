@@ -12,16 +12,20 @@ Overview: A 4-person team project building a Web and Mobile MVP over a 4-week sp
 | **AI Engine** | Claude API / OpenAI API | AI-powered features and structured responses |
 | **Hosting** | Vercel (Web), Supabase (DB), Expo EAS (Mobile) | Easy deployment and scaling |
 
-Team Split:
-Member A: Backend & AI Interview Engine (40% focus). 
-Member B: Web Application (20% focus).
-Member C: Mobile Application (20% focus).
-Member D: Auth, Infra, DevOps & QA (20% focus).  
+## 👥 Team Split
 
-MVP Scope:
-In Scope: Signup/login for web and mobile.  
-In Scope: Interview setup to choose type, role/domain, and difficulty. 
-In Scope: Text-based chat interview with AI interviewer for 5–8 turns.  
-In Scope: AI-generated feedback report after each session. 
-In Scope: History dashboard to list past sessions and revisit feedback.
-Out of Scope (Phase 2): Voice input/output, resume uploads, payments, admin panel, push notifications, and adaptive difficulty.  
+<ul>
+  <li><strong>Member A:</strong> Backend & AI Interview Engine (40% focus)</li>
+  <li><strong>Member B:</strong> Web Application (20% focus)</li>
+  <li><strong>Member C:</strong> Mobile Application (20% focus)</li>
+  <li><strong>Member D:</strong> Authentication, Infrastructure, DevOps & QA (20% focus)</li>
+</ul>
+
+## 🎯 MVP Scope
+
+- **In Scope:** Signup/Login for web and mobile.
+- **In Scope:** Interview setup to choose **type, role/domain, and difficulty**.
+- **In Scope:** Text-based chat interview with an AI interviewer for **5–8 turns**.
+- **In Scope:** AI-generated feedback report after each session.
+- **In Scope:** History dashboard to list past sessions and revisit feedback.
+- **Out of Scope (Phase 2):** Voice input/output, resume uploads, payments, admin panel, push notifications, and adaptive difficulty.
