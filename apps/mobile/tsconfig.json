@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-native"
+  },
+  "include": [
+    "src",
+    "expo-env.d.ts"
+  ]
+}

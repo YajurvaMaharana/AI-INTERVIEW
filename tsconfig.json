@@ -1,0 +1,18 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./apps/web" },
+    { "path": "./apps/backend" },
+    { "path": "./apps/mobile" },
+    { "path": "./packages/shared-types" }
+  ],
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ai-platform/shared-types": [
+        "packages/shared-types/src/index.ts"
+      ]
+    }
+  }
+}

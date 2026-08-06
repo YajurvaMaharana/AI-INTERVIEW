@@ -1,0 +1,21 @@
+{
+  "name": "@ai-platform/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "expo start",
+    "build": "expo export",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-platform/shared-types": "workspace:*",
+    "expo": "^53.0.0",
+    "react": "^19.0.0",
+    "react-native": "^0.79.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.0.0"
+  }
+}
