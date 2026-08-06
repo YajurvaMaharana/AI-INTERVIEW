@@ -34,3 +34,4 @@ jobs:
 
       - name: Build
         run: pnpm build
+# CI workflow v2
