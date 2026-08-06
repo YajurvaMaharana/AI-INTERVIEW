@@ -2,9 +2,11 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "module": "commonjs",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "target": "ES2022",
-     "esModuleInterop": true
+    "esModuleInterop": true,
+    "types": ["node"]
   },
   "include": [
     "src"

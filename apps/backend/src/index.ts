@@ -1,22 +1,20 @@
 import express from "express";
-import { User } from "@ai-platform/shared-types";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 
-const exampleUser: User = {
-  id: "1",
-  name: "Demo User",
-  email: "demo@example.com",
-  createdAt: new Date()
-};
+app.use(express.json());
 
 app.get("/", (_req, res) => {
   res.json({
-    message: "Backend running",
-    user: exampleUser
+    message: "AI Interview Platform Backend Running",
   });
 });
 
-app.listen(4000, () => {
-  console.log("Backend running on port 4000");
+const PORT = process.env.PORT || 4000;
+
+app.listen(PORT, () => {
+  console.log(`Backend running on port ${PORT}`);
 });
