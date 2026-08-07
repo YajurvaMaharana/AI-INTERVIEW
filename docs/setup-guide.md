@@ -4,20 +4,50 @@
 
 Install the following:
 
-- Node.js
-- pnpm
+- Node.js 24.x
+- pnpm 11.x
 - Docker Desktop (for Supabase local development)
+- Supabase CLI
+
+Verify your installation:
+
+node -v
+
+pnpm -v
+
+supabase --version
 
 ## Installation
 
 Clone the repository and install dependencies:
 
-git clone <repository-url>
+git clone https://github.com/YajurvaMaharana/AI-INTERVIEW.git
 
-cd my-monorepo
+cd AI-INTERVIEW
 
 pnpm install
 
+## Quick Start
+
+1. Install all dependencies:
+
+pnpm install
+
+2. Start Supabase:
+
+supabase start
+
+3. Start the backend:
+
+pnpm --filter @ai-platform/backend dev
+
+4. Start the web application:
+
+pnpm --filter @ai-platform/web dev
+
+5. Start the mobile application:
+
+pnpm --filter @ai-platform/mobile dev
 ## Workspace Structure
 
 my-monorepo
