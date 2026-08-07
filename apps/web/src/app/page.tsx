@@ -1,4 +1,4 @@
-import { User } from "@ai-platform/shared-types";
+import type { User } from "@ai-platform/shared-types";
 
 const demoUser: User = {
   id: "web-1",
@@ -12,8 +12,9 @@ export default function Home() {
     <main>
       <h1>AI Interview Platform</h1>
       <p>Practice interviews with AI-powered feedback.</p>
-      <p>Welcome, {demoUser.name}!</p>
+      <p>User ID: {demoUser.id}</p>
+      <p>User Name: {demoUser.name}</p>
+      <p>User Email: {demoUser.email}</p>
     </main>
   );
 }
-

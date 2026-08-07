@@ -14,11 +14,6 @@
       "DOM"
     ],
     "moduleResolution": "node",
-    "baseUrl": ".",
-    "paths": {
-      "@ai-platform/shared-types": [
-        "packages/shared-types/src/index.ts"
-      ]
-    }
+    "baseUrl": "."
   }
 }
