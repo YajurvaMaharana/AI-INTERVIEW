@@ -5,3 +5,8 @@ supabase/.temp/
 .expo/
 .next/
 **/dist/
+.env
+.env.production
+**/.env
+**/.env.local
+**/.env.production
