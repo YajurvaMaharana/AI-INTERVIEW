@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "AI Interview",
+    "slug": "ai-interview",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "jsEngine": "hermes",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4190ae2e-67c4-4724-ae47-bf7edd0060a4"
+      }
+    },
+    "owner": "aastha26shirkes-team",
+    "android": {
+      "package": "com.aastha26shirkesteam.aiinterview"
+    }
+  }
+}
