@@ -139,3 +139,56 @@ pnpm build
 
 Successful completion confirms the workspace is configured correctly.
 
+## Cloud Infrastructure and Security
+
+### Environment Variables
+
+Never commit real environment files or secret credentials to Git.
+
+The following files are ignored by Git:
+
+- .env
+- .env.local
+- .env.production
+
+Use the provided example files as templates:
+
+- apps/backend/.env.example
+- apps/web/.env.example
+- apps/mobile/.env.example
+
+Backend environment variables include the Supabase project URL and
+service-role key. The service-role key must remain private.
+
+Web and mobile applications use the public Supabase URL and anonymous key.
+These values must be configured through the appropriate local environment
+files and must not contain private service-role credentials.
+
+Real environment values are shared with team members through a secure
+channel and must never be committed to source control.
+
+### Supabase
+
+The project uses Supabase for authentication and database services.
+
+Email authentication is enabled in the Supabase project.
+
+The backend Supabase connection is verified using the configured
+environment variables.
+
+### Vercel
+
+The backend is configured for deployment through Vercel.
+
+Production deployments should use environment variables configured in
+Vercel rather than committing secrets to the repository.
+
+### Expo EAS
+
+The mobile application is linked to an Expo EAS project.
+
+An Android Preview build has been successfully generated using the
+configured EAS project.
+
+EAS credentials and private environment values must not be committed
+to source control.
