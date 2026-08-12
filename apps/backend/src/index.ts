@@ -5,6 +5,7 @@
 import 'dotenv/config';
 import express from 'express';
 import healthRouter from './routes/health.routes';
+import interviewRouter from './routes/interview.routes';
 import { verifyAuth } from './middleware/auth.middleware';
 
 const app = express();
@@ -14,6 +15,7 @@ app.use(express.json());
 
 // Routes
 app.use(healthRouter);
+app.use(interviewRouter);
 app.get('/api/test-auth', verifyAuth, (req, res) => {
   res.status(200).json({
     message: 'Success! You have a valid token.',
