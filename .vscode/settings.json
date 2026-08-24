@@ -1,8 +1,4 @@
 {
-  "css.lint.unknownAtRules": "ignore",
   "css.customData": [".vscode/tailwind-css-data.json"],
-  "tailwindCSS.experimental.classRegex": [
-    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
-    ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
-  ]
+  "css.lint.unknownAtRules": "ignore"
 }
