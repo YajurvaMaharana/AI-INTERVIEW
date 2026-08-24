@@ -22,13 +22,6 @@ export default function HomePage() {
             </Button>
           </Link>
         </div>
-        <div className="pt-2">
-          <Link href="/interview/new">
-            <Button variant="ghost" size="lg">
-              Start Practice Interview →
-            </Button>
-          </Link>
-        </div>
       </div>
     </div>
   );
