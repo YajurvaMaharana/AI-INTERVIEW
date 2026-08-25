@@ -29,3 +29,4 @@ Overview: A 4-person team project building a Web and Mobile MVP over a 4-week sp
 - **In Scope:** AI-generated feedback report after each session.
 - **In Scope:** History dashboard to list past sessions and revisit feedback.
 - **Out of Scope (Phase 2):** Voice input/output, resume uploads, payments, admin panel, push notifications, and adaptive difficulty.
+
