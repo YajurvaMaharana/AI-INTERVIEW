@@ -1,6 +1,7 @@
 name: Backend Lint & Typecheck
 
 on:
+  workflow_dispatch
   pull_request:
     branches:
       - main
