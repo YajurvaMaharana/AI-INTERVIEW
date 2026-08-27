@@ -1,11 +1,11 @@
 name: Mobile Lint & Typecheck
 
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - main
       - Issue-4
-
 jobs:
   mobile-ci:
     name: Mobile Lint & Typecheck
