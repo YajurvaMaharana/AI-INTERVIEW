@@ -116,3 +116,6 @@ The lockfile must remain synchronized with the package configuration because CI 
 
 ```bash
 pnpm install --frozen-lockfile
+```
+CI workflows are validated automatically through GitHub Actions.
+
