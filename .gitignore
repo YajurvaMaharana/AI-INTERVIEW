@@ -29,3 +29,13 @@ Thumbs.db
 .vscode/
 .idea/
 *.sw?
+node_modules/
+.env
+.next/
+.expo/
+dist/
+
+.vercel
+.env*
+.turbo/
+supabase/.temp/
