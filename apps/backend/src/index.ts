@@ -3,13 +3,13 @@
 // ---------------------------------------------------------------------------
 
 import 'dotenv/config';
-import express from 'express';
+import express, { Express } from 'express';
 import healthRouter from './routes/health.routes';
 import interviewRouter from './routes/interview.routes';
 import authRouter from './routes/auth.routes';
 import { verifyAuth } from './middleware/auth.middleware';
 
-const app = express();
+export const app: Express = express();
 const PORT = parseInt(process.env['PORT'] ?? '3001', 10);
 
 app.use(express.json());
