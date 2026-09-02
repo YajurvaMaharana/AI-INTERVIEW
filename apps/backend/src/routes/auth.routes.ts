@@ -1,23 +1,22 @@
 // ---------------------------------------------------------------------------
-// interview.routes.ts — Interview session and messaging endpoints
+// auth.routes.ts — Authentication endpoints (register & login)
 // ---------------------------------------------------------------------------
 
 import { Router } from 'express';
-import { verifyAuth } from '../middleware/auth.middleware';
-import { createInterview, postMessage } from '../controllers/interview.controller';
+import { register, login } from '../controllers/auth.controller';
 
 const router: Router = Router();
 
 // ---------------------------------------------------------------------------
-// POST /api/interviews
-//   Create a new interview session and receive the AI's opening question.
+// POST /register
+//   Create a new user account.
 // ---------------------------------------------------------------------------
-router.post('/api/interviews', verifyAuth, createInterview);
+router.post('/register', register);
 
 // ---------------------------------------------------------------------------
-// POST /api/interviews/:id/message
-//   Send a candidate message and receive the AI interviewer's response.
+// POST /login
+//   Authenticate user and return JWT / session.
 // ---------------------------------------------------------------------------
-router.post('/api/interviews/:id/message', verifyAuth, postMessage);
+router.post('/login', login);
 
 export default router;

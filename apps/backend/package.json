@@ -1,5 +1,5 @@
 {
-  "name": "ai-interview-backend",
+  "name": "@ai-platform/backend",
   "version": "0.1.0",
   "private": true,
   "description": "Backend API for the AI Interview Practice Platform",
@@ -8,20 +8,24 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src",
     "typecheck": "tsc --noEmit"
   },
+
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.49.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.0",
     "eslint": "^9.16.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.67.0"
   },
   "engines": {
     "node": ">=18.0.0"

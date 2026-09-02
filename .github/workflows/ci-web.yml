@@ -30,14 +30,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build shared types
-        run: pnpm --filter @ai-platform/shared-types build
-
       - name: Lint web
         run: pnpm --filter @ai-platform/web lint
 
       - name: Typecheck web
         run: pnpm --filter @ai-platform/web typecheck
-
-      - name: Lint web
-        run: pnpm --filter @ai-platform/web lint
