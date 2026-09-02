@@ -14,6 +14,15 @@ module.exports = {
         "2xl": "1400px",
       },
     },
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./lib/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
     extend: {
       colors: {
         border: "hsl(var(--border))",
@@ -73,3 +82,4 @@ module.exports = {
   },
   plugins: [require("tailwindcss-animate")],
 };
+export default config;
