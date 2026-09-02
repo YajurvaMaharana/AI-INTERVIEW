@@ -1,1 +1,38 @@
-node_modules
+### Dependencies ###
+node_modules/
+
+### Build output ###
+dist/
+.next/
+.expo/
+web-build/
+*.tsbuildinfo
+
+### Turborepo ###
+.turbo/
+
+### Environment files ###
+.env
+.env.*
+.env*.local
+
+### Lockfiles (only root pnpm-lock.yaml should be committed) ###
+apps/**/package-lock.json
+apps/**/pnpm-lock.yaml
+apps/**/pnpm-workspace.yaml
+packages/**/package-lock.json
+
+### Vercel ###
+.vercel
+
+### Supabase ###
+supabase/.temp/
+
+### OS files ###
+.DS_Store
+Thumbs.db
+
+### IDE ###
+.idea/
+*.swp
+*.swo

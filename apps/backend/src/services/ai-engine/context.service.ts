@@ -1,241 +1,394 @@
 // ---------------------------------------------------------------------------
-// context.service.ts — Conversation context builder & token budget manager
-// ---------------------------------------------------------------------------
-//
-// Provider-agnostic: exports types and pure functions that work with any
-// Claude / OpenAI-style chat completion API.
+// context.service.ts — Provider-agnostic context building, token budgeting,
+//                      and prompt template injection
 // ---------------------------------------------------------------------------
 
 import { getMessagesBySessionId } from '../db.service';
-import type { InterviewMessage, Difficulty } from '../../types/database.types';
+import type { SenderRole } from '../../types/database.types';
 
 // ---------------------------------------------------------------------------
-// 1. Provider-agnostic types
+// Types & Interfaces — reusable across any LLM provider
 // ---------------------------------------------------------------------------
 
-/** Standard chat message format used by Claude & OpenAI APIs. */
+/** Chat-completion role compatible with OpenAI, Anthropic, and similar APIs. */
+export type ChatRole = 'user' | 'assistant' | 'system';
+
+/**
+ * A single message in the chat-completion message array.
+ * This is the universal format consumed by all downstream AI providers.
+ */
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: ChatRole;
   content: string;
 }
 
-/** Variables that can be injected into prompt templates. */
-export interface PromptVariables {
-  role: string;
-  difficulty: Difficulty;
-  [key: string]: string;
-}
-
-/** Options for the context budget trimmer. */
-export interface ContextBudgetOptions {
+/**
+ * Options that control how the context window is trimmed.
+ *
+ * Exactly one of `maxMessages` or `maxTokens` should be provided.
+ * If both are supplied, `maxTokens` takes precedence.
+ */
+export interface TruncationOptions {
   /**
-   * Maximum number of messages (including the system prompt) to retain.
-   * Defaults to 40.
+   * Maximum number of non-system messages to retain.
+   * The system prompt is always preserved outside this count.
    */
   maxMessages?: number;
 
   /**
-   * Approximate maximum token count for all messages combined.
-   * Uses a rough 1 token ≈ 4 characters heuristic.
-   * Defaults to 100 000 (~400 000 chars).
+   * Approximate token budget for the entire message array (system prompt
+   * included). Uses the `estimateTokens` heuristic — NOT a real tokeniser.
    */
   maxTokens?: number;
 }
 
+/** Variables that can be injected into a prompt template string. */
+export interface PromptVariables {
+  role: string;
+  difficulty: string;
+  [key: string]: string;
+}
+
+/**
+ * Shape of a raw conversation record as stored in the database.
+ *
+ * This is the input format that `buildContext` accepts — it decouples the
+ * context-building logic from the exact Supabase row type so it can also be
+ * used with manually constructed test data or alternative data sources.
+ */
+export interface RawDatabaseMessage {
+  sender: 'user' | 'ai';
+  text: string;
+  timestamp: Date;
+}
+
+/**
+ * Configuration for `buildContext`.
+ */
+export interface BuildContextOptions {
+  /** The system prompt to place at index 0 of the returned array. */
+  systemPrompt: string;
+
+  /** Raw conversation messages from the database (in any order). */
+  messages: readonly RawDatabaseMessage[];
+
+  /**
+   * Maximum number of *conversation* messages (excluding the system prompt)
+   * to include in the result. Oldest messages are dropped first, always in
+   * user/assistant pairs to preserve conversational continuity.
+   *
+   * When omitted, all messages are retained.
+   */
+  maxMessages?: number;
+}
+
 // ---------------------------------------------------------------------------
-// 2. Prompt template injection
+// Mapping helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Replace `{{variable}}` placeholders in a prompt template with values from
- * the supplied `variables` map.
+ * Convert the database's `SenderRole` to the provider-agnostic `ChatRole`.
  *
- * Unknown placeholders are left untouched so downstream code can detect
- * missing injections.
+ * The DB stores `'user'` and `'ai'`; chat APIs expect `'user'` and
+ * `'assistant'`.
+ */
+function mapSenderRoleToChatRole(senderRole: SenderRole): ChatRole {
+  switch (senderRole) {
+    case 'user':
+      return 'user';
+    case 'ai':
+      return 'assistant';
+    default: {
+      // Exhaustive check — TypeScript will flag unhandled values at compile time.
+      const _exhaustive: never = senderRole;
+      throw new Error(`Unknown sender_role: ${_exhaustive}`);
+    }
+  }
+}
+
+/**
+ * Map the raw DB sender value (`'user'` | `'ai'`) to the LLM API role.
+ * Identical logic to `mapSenderRoleToChatRole` but accepts the looser
+ * `RawDatabaseMessage.sender` type so callers don't need to cast.
+ */
+function mapRawSenderToChatRole(sender: RawDatabaseMessage['sender']): ChatRole {
+  return sender === 'ai' ? 'assistant' : 'user';
+}
+
+// ---------------------------------------------------------------------------
+// buildMessageHistory — fetches from DB and converts to ChatMessage[]
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch all conversation messages for a session from the database and
+ * return them as a chronologically ordered `ChatMessage[]`.
+ *
+ * The returned array does **not** include a system prompt — prepend one
+ * yourself before sending to the LLM.
+ *
+ * @param sessionId - The UUID of the interview session.
+ * @returns Ordered array of `{ role, content }` objects.
+ */
+export async function buildMessageHistory(sessionId: string): Promise<ChatMessage[]> {
+  const dbMessages = await getMessagesBySessionId(sessionId);
+
+  return dbMessages.map((msg) => ({
+    role: mapSenderRoleToChatRole(msg.sender_role),
+    content: msg.content,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Token estimation (lightweight heuristic)
+// ---------------------------------------------------------------------------
+
+/**
+ * Rough token-count estimate: ~4 characters per token for English text.
+ *
+ * This is intentionally a simple heuristic so the module has zero external
+ * dependencies. Swap in `tiktoken` or a provider SDK if you need precision.
+ */
+export function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+/**
+ * Sum the estimated token count for an array of messages.
+ */
+function sumTokens(messages: ChatMessage[]): number {
+  return messages.reduce((total, msg) => total + estimateTokens(msg.content), 0);
+}
+
+// ---------------------------------------------------------------------------
+// truncateContext — pure, testable context-window trimming
+// ---------------------------------------------------------------------------
+
+/**
+ * Trim a message array to fit within a budget while preserving:
+ *
+ * 1. **The system prompt** — always kept at position 0.
+ * 2. **Conversation continuity** — messages are removed in pairs
+ *    (user + assistant) from the *oldest* end so that a question is never
+ *    orphaned from its answer.
+ * 3. **The most recent exchange** — the newest messages are always retained.
+ *
+ * ### Algorithm
+ *
+ * ```
+ * [ system | …oldest pairs… | …newest pairs… ]
+ *            ↑ removed first   ↑ kept
+ * ```
+ *
+ * @param messages  – Full message array. The first element **must** have
+ *                    `role: 'system'`; the rest are user/assistant turns.
+ * @param options   – Truncation budget (see `TruncationOptions`).
+ * @returns A new array (never mutates the input) fitting the budget.
+ */
+export function truncateContext(
+  messages: readonly ChatMessage[],
+  options: TruncationOptions,
+): ChatMessage[] {
+  if (messages.length === 0) {
+    return [];
+  }
+
+  // Separate system prompt from conversation turns.
+  const systemMessage: ChatMessage | undefined =
+    messages[0].role === 'system' ? messages[0] : undefined;
+
+  const conversation: ChatMessage[] = systemMessage
+    ? messages.slice(1)
+    : [...messages];
+
+  // ---- Group conversation into exchange pairs (user + assistant) ----------
+
+  const pairs: ChatMessage[][] = [];
+  let i = 0;
+
+  while (i < conversation.length) {
+    const current = conversation[i];
+
+    // If a user message is immediately followed by an assistant message,
+    // group them as a pair. Otherwise treat the message as a solo unit
+    // (e.g. trailing user message awaiting an AI reply).
+    if (
+      current.role === 'user' &&
+      i + 1 < conversation.length &&
+      conversation[i + 1].role === 'assistant'
+    ) {
+      pairs.push([current, conversation[i + 1]]);
+      i += 2;
+    } else {
+      pairs.push([current]);
+      i += 1;
+    }
+  }
+
+  // ---- Apply budget -------------------------------------------------------
+
+  const { maxMessages, maxTokens } = options;
+
+  // Token-based truncation takes precedence when both options are supplied.
+  if (maxTokens !== undefined) {
+    return truncateByTokens(systemMessage, pairs, maxTokens);
+  }
+
+  if (maxMessages !== undefined) {
+    return truncateByMessageCount(systemMessage, pairs, maxMessages);
+  }
+
+  // No truncation requested — return a shallow copy.
+  return [...messages];
+}
+
+// ---- Internal truncation strategies ---------------------------------------
+
+function truncateByMessageCount(
+  systemMessage: ChatMessage | undefined,
+  pairs: ChatMessage[][],
+  maxNonSystemMessages: number,
+): ChatMessage[] {
+  const result: ChatMessage[] = [];
+
+  // Work backwards from the newest pairs, accumulating until we hit the limit.
+  let count = 0;
+
+  for (let idx = pairs.length - 1; idx >= 0; idx--) {
+    const pair = pairs[idx];
+    if (count + pair.length > maxNonSystemMessages) break;
+    result.unshift(...pair);
+    count += pair.length;
+  }
+
+  if (systemMessage) {
+    result.unshift(systemMessage);
+  }
+
+  return result;
+}
+
+function truncateByTokens(
+  systemMessage: ChatMessage | undefined,
+  pairs: ChatMessage[][],
+  tokenBudget: number,
+): ChatMessage[] {
+  let remaining = tokenBudget;
+
+  // Reserve budget for the system prompt first.
+  if (systemMessage) {
+    remaining -= estimateTokens(systemMessage.content);
+    if (remaining <= 0) {
+      // Edge case: system prompt alone exceeds budget. Return it anyway.
+      return [systemMessage];
+    }
+  }
+
+  const result: ChatMessage[] = [];
+
+  // Work backwards from the newest pairs.
+  for (let idx = pairs.length - 1; idx >= 0; idx--) {
+    const pair = pairs[idx];
+    const pairTokens = sumTokens(pair);
+
+    if (pairTokens > remaining) break;
+
+    result.unshift(...pair);
+    remaining -= pairTokens;
+  }
+
+  if (systemMessage) {
+    result.unshift(systemMessage);
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Prompt template injection
+// ---------------------------------------------------------------------------
+
+/**
+ * Replace `{{variable}}` placeholders in a prompt template string with the
+ * corresponding values from a `PromptVariables` map.
+ *
+ * Unmatched placeholders are left as-is so downstream code can detect them.
  *
  * @example
  * ```ts
- * const filled = injectPromptVariables(TECHNICAL_PROMPT, {
- *   role: 'Backend Engineer',
- *   difficulty: 'hard',
- * });
+ * const prompt = injectPromptVariables(
+ *   TECHNICAL_SYSTEM_PROMPT,
+ *   { role: 'Senior Frontend Developer', difficulty: 'hard' },
+ * );
  * ```
  */
 export function injectPromptVariables(
   template: string,
   variables: PromptVariables,
 ): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
-    return key in variables ? variables[key] : `{{${key}}}`;
-  });
+  return template.replace(
+    /\{\{(\w+)\}\}/g,
+    (_match: string, key: string): string => {
+      if (key in variables) {
+        return variables[key];
+      }
+      // Leave unmatched placeholders intact for visibility.
+      return `{{${key}}}`;
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------
-// 3. DB → ChatMessage[] conversion
+// buildContext — high-level, all-in-one context builder
 // ---------------------------------------------------------------------------
 
 /**
- * Map a database `SenderRole` to the chat-API `role`.
+ * Build a complete, LLM-ready message array from raw database records.
  *
- * - `'user'`  → `'user'`
- * - `'ai'`    → `'assistant'`
- */
-function mapSenderRole(senderRole: InterviewMessage['sender_role']): 'user' | 'assistant' {
-  return senderRole === 'ai' ? 'assistant' : 'user';
-}
-
-/**
- * Fetch stored conversation messages for a session and convert them into
- * the provider-agnostic `ChatMessage[]` format, ordered chronologically
- * by `sequence_order`.
+ * This is the primary entry point for preparing a chat-completion request.
+ * It performs three steps in a single call:
  *
- * **Does NOT include the system prompt** — callers should prepend it via
- * `applyContextBudget()` or manually.
- */
-export async function buildMessageHistory(sessionId: string): Promise<ChatMessage[]> {
-  const dbMessages: InterviewMessage[] = await getMessagesBySessionId(sessionId);
-
-  return dbMessages.map((msg): ChatMessage => ({
-    role: mapSenderRole(msg.sender_role),
-    content: msg.content,
-  }));
-}
-
-// ---------------------------------------------------------------------------
-// 4. Context / token budget management (pure, testable function)
-// ---------------------------------------------------------------------------
-
-/** Rough token estimate: ~4 characters per token for English text. */
-const CHARS_PER_TOKEN = 4;
-
-/**
- * Estimate the token count of a single message (content + role overhead).
- * Adds a small overhead (~4 tokens) per message for role/metadata framing.
- */
-function estimateTokens(message: ChatMessage): number {
-  const overhead = 4; // role label + separators
-  return overhead + Math.ceil(message.content.length / CHARS_PER_TOKEN);
-}
-
-/**
- * Trim the conversation to fit within a **message count** and
- * **approximate token budget**, while preserving:
- *
- * 1. The **system prompt** (always the first element, never trimmed).
- * 2. **Recent conversation** — keeps the most recent messages.
- * 3. **Question/answer pair integrity** — never splits a user message
- *    from its immediately following assistant reply (or vice-versa).
- *
- * ### Algorithm
- *
- * Starting from the most recent message, walk backwards and include
- * messages as long as both budgets allow. If including a message would
- * split a user↔assistant pair, include the paired message too (or drop
- * both if neither fits).
- *
- * @param systemPrompt - The system-level instruction message.
- * @param conversation - The user/assistant messages (no system messages).
- * @param options      - Budget limits.
- * @returns A trimmed `ChatMessage[]` array starting with the system prompt.
+ * 1. **Map** each raw DB message (`sender` / `text`) into the strict
+ *    `ChatMessage` format (`role` / `content`).
+ * 2. **Sort** messages chronologically by `timestamp`.
+ * 3. **Prepend** the system prompt at index 0.
+ * 4. **Truncate** — if `maxMessages` is set, drop the oldest conversation
+ *    messages (in user/assistant pairs) while always preserving the system
+ *    prompt and the most recent exchanges.
  *
  * @example
  * ```ts
- * const history = await buildMessageHistory(sessionId);
- * const systemMsg: ChatMessage = { role: 'system', content: filledPrompt };
- * const trimmed = applyContextBudget(systemMsg, history, { maxMessages: 20 });
- * // trimmed[0] is always the system prompt
+ * const context = buildContext({
+ *   systemPrompt: injectedTechnicalPrompt,
+ *   messages: rawDbRows,
+ *   maxMessages: 20,
+ * });
+ * // → [{ role: 'system', … }, { role: 'user', … }, { role: 'assistant', … }, …]
  * ```
  */
-export function applyContextBudget(
-  systemPrompt: ChatMessage,
-  conversation: ChatMessage[],
-  options: ContextBudgetOptions = {},
-): ChatMessage[] {
-  const maxMessages = options.maxMessages ?? 40;
-  const maxTokens = options.maxTokens ?? 100_000;
+export function buildContext(options: BuildContextOptions): ChatMessage[] {
+  const { systemPrompt, messages, maxMessages } = options;
 
-  // Reserve budget for the system prompt.
-  const systemTokens = estimateTokens(systemPrompt);
-  let remainingTokens = maxTokens - systemTokens;
-  // -1 because the system prompt takes one message slot.
-  let remainingSlots = maxMessages - 1;
+  // 1. Sort raw messages by timestamp (oldest first).
+  const sorted = [...messages].sort(
+    (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+  );
 
-  if (remainingTokens <= 0 || remainingSlots <= 0) {
-    // Budget only fits the system prompt itself.
-    return [systemPrompt];
+  // 2. Map DB shape → ChatMessage shape.
+  const mapped: ChatMessage[] = sorted.map((msg) => ({
+    role: mapRawSenderToChatRole(msg.sender),
+    content: msg.text,
+  }));
+
+  // 3. Prepend system prompt.
+  const full: ChatMessage[] = [
+    { role: 'system', content: systemPrompt },
+    ...mapped,
+  ];
+
+  // 4. Truncate if a budget was specified.
+  if (maxMessages !== undefined) {
+    return truncateContext(full, { maxMessages });
   }
 
-  // Walk backwards through the conversation, collecting messages.
-  const kept: ChatMessage[] = [];
-  let i = conversation.length - 1;
-
-  while (i >= 0 && remainingSlots > 0 && remainingTokens > 0) {
-    const current = conversation[i];
-    const currentTokens = estimateTokens(current);
-
-    // Check if we need to keep a paired message to avoid splitting an exchange.
-    // A "pair" is a user message followed by an assistant message (or vice-versa).
-    const hasPrev = i - 1 >= 0;
-    const prevMsg = hasPrev ? conversation[i - 1] : null;
-    const isPairedWithPrev =
-      prevMsg !== null &&
-      ((current.role === 'assistant' && prevMsg.role === 'user') ||
-        (current.role === 'user' && prevMsg.role === 'assistant'));
-
-    if (isPairedWithPrev && prevMsg !== null) {
-      // Try to include both the current message and its pair.
-      const prevTokens = estimateTokens(prevMsg);
-      const pairTokens = currentTokens + prevTokens;
-
-      if (pairTokens <= remainingTokens && remainingSlots >= 2) {
-        // Both fit — include the pair.
-        kept.unshift(current);
-        kept.unshift(prevMsg);
-        remainingTokens -= pairTokens;
-        remainingSlots -= 2;
-        i -= 2;
-      } else {
-        // The pair doesn't fit as a whole — stop to avoid orphaning.
-        break;
-      }
-    } else {
-      // No pair constraint (e.g. first message is user with no preceding assistant).
-      if (currentTokens <= remainingTokens) {
-        kept.unshift(current);
-        remainingTokens -= currentTokens;
-        remainingSlots -= 1;
-        i -= 1;
-      } else {
-        break;
-      }
-    }
-  }
-
-  return [systemPrompt, ...kept];
-}
-
-// ---------------------------------------------------------------------------
-// 5. Convenience: build the full context array in one call
-// ---------------------------------------------------------------------------
-
-/**
- * High-level helper that:
- * 1. Fetches conversation history from the DB.
- * 2. Prepends a system prompt (with variables injected).
- * 3. Trims to fit within the context budget.
- *
- * @returns A `ChatMessage[]` ready to send to Claude / OpenAI.
- */
-export async function buildContext(
-  sessionId: string,
-  promptTemplate: string,
-  variables: PromptVariables,
-  budgetOptions?: ContextBudgetOptions,
-): Promise<ChatMessage[]> {
-  const systemContent = injectPromptVariables(promptTemplate, variables);
-  const systemMessage: ChatMessage = { role: 'system', content: systemContent };
-
-  const history = await buildMessageHistory(sessionId);
-
-  return applyContextBudget(systemMessage, history, budgetOptions);
+  return full;
 }
