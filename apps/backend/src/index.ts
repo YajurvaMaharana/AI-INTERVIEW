@@ -8,14 +8,14 @@ const app = express();
 
 app.use(express.json());
 
-app.get("/", (_req, res) => {
-  const sampleUser: User = {
-    id: "backend-1",
-    name: "Backend Admin",
-    email: "admin@example.com",
-    createdAt: new Date(),
-  };
+const sampleUser: User = {
+  id: "backend-1",
+  name: "Backend Admin",
+  email: "admin@example.com",
+  createdAt: new Date(),
+};
 
+app.get("/", (_req, res) => {
   res.json({
     message: "AI Interview Platform Backend Running",
     sampleUser,
