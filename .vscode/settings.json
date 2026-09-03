@@ -4,4 +4,9 @@
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
   }
+  "css.customData": [".vscode/tailwind-css-data.json"],
+  "css.lint.unknownAtRules": "ignore"
+  "css.lint.unknownAtRules": "ignore",
+  "css.customData": [".vscode/tailwind-css-data.json"],
+  "css.lint.unknownAtRules": "ignore"
 }
