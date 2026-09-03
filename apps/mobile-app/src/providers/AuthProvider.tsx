@@ -6,7 +6,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { type Session, type User } from "@supabase/supabase-js";
+import { type Session, type User, type AuthChangeEvent } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
 // ---------------------------------------------------------------------------
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Restore persisted session on mount & listen for auth state changes.
   useEffect(() => {
     // 1. Restore persisted session.
-    supabase.auth.getSession().then(({ data: { session: restoredSession } }) => {
+    supabase.auth.getSession().then(({ data: { session: restoredSession } }: { data: { session: Session | null } }) => {
       setSession(restoredSession);
       setIsLoading(false);
     });
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 2. Subscribe to future auth state changes.
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, newSession: Session | null) => {
       setSession(newSession);
     });
 

@@ -143,7 +143,7 @@ export default function FeedbackScreen() {
       >
         {/* ── Header ── */}
         <Text style={styles.title}>Session Feedback</Text>
-        <Text style={styles.subtitle}>Here's how you did</Text>
+        <Text style={styles.subtitle}>Here&apos;s how you did</Text>
 
         {/* ── Overall score ── */}
         <View style={styles.scoreCard}>
