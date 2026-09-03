@@ -1,67 +1,20 @@
 {
   "name": "ai-interview",
-  "main": "expo-router/entry",
-  "version": "1.0.0",
-  "dependencies": {
-    "@supabase/supabase-js": "^2.112.2",
-    "expo": "^57.0.12",
-    "expo-constants": "~57.0.10",
-    "expo-font": "~57.0.1",
-    "expo-linking": "~57.0.5",
-    "expo-router": "~57.0.12",
-    "expo-secure-store": "~57.0.1",
-    "expo-splash-screen": "~57.0.6",
-    "expo-status-bar": "~57.0.1",
-    "expo-symbols": "~57.0.2",
-    "expo-web-browser": "~57.0.2",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-native": "0.86.2",
-    "react-native-reanimated": "4.5.1",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "~4.26.0",
-    "react-native-web": "~0.21.0",
-    "react-native-worklets": "0.10.1"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/react": "~19.2.2",
-    "eslint": "^10.8.1",
-    "eslint-plugin-react": "^7.37.5",
-    "globals": "^17.9.0",
-    "jiti": "^2.7.0",
-    "typescript": "~6.0.3",
-    "typescript-eslint": "^8.67.0"
-  },
-  "scripts": {
-    "start": "expo start",
-    "lint": "eslint .",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web"
-  },
-  "private": true
-  "private": true,
-  "scripts": {
-    "dev": "pnpm --filter web dev",
-    "build": "pnpm --filter web build",
-    "lint": "pnpm --filter web lint"
   "version": "1.0.0",
   "private": true,
   "packageManager": "pnpm@11.18.0",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "lint": "turbo run lint",
-    "dev:web": "pnpm --filter web dev",
-    "build:web": "pnpm --filter web build",
-    "lint:web": "pnpm --filter web lint"
+    "lint": "turbo run lint"
   },
   "devDependencies": {
     "turbo": "^2.10.7"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "typescript": "^5.7.3"
   }
-}
 }

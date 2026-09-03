@@ -1,11 +1,13 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useAuth } from "@/providers/AuthProvider";
+import { useRouter } from "expo-router";
 
 /**
  * Home screen – displays a welcome message with the authenticated user's email.
  */
 export default function HomeScreen() {
   const { user } = useAuth();
+  const router = useRouter();
 
   return (
     <View style={styles.container}>
@@ -22,6 +24,12 @@ export default function HomeScreen() {
           Start an AI-powered mock interview to sharpen your skills and get
           instant feedback.
         </Text>
+        <TouchableOpacity 
+          style={styles.startButton}
+          onPress={() => router.push('/interview-config')}
+        >
+          <Text style={styles.startButtonText}>Configure Interview</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -74,5 +82,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#9D9DB8",
     lineHeight: 22,
+    marginBottom: 20,
+  },
+  startButton: {
+    backgroundColor: "#6C63FF",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  startButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });

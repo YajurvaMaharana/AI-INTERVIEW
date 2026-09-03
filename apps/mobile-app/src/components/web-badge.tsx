@@ -1,4 +1,5 @@
 import { version } from 'expo/package.json';
+// @ts-ignore
 import { Image } from 'expo-image';
 import { useColorScheme, StyleSheet } from 'react-native';
 
