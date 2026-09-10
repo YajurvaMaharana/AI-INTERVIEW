@@ -47,19 +47,27 @@ export class AIServiceError extends Error {
 }
 
 // ---------------------------------------------------------------------------
-// Gemini client initialisation
+// Gemini client initialisation (lazy)
 // ---------------------------------------------------------------------------
 
-const apiKey = process.env['GEMINI_API_KEY'];
-const modelName = process.env['GEMINI_MODEL'] ?? 'gemini-2.5-flash';
+let cachedGenAI: GoogleGenerativeAI | null = null;
 
-if (!apiKey) {
-  throw new Error(
-    'Missing required environment variable: GEMINI_API_KEY must be set.',
-  );
+function getGeminiClient(): { client: GoogleGenerativeAI; modelName: string } {
+  const apiKey = process.env['GEMINI_API_KEY'];
+  const modelName = process.env['GEMINI_MODEL'] ?? 'gemini-2.5-flash';
+
+  if (!apiKey) {
+    throw new AIServiceError(
+      'Missing required environment variable: GEMINI_API_KEY must be set.',
+    );
+  }
+
+  if (!cachedGenAI) {
+    cachedGenAI = new GoogleGenerativeAI(apiKey);
+  }
+
+  return { client: cachedGenAI, modelName };
 }
-
-const genAI = new GoogleGenerativeAI(apiKey);
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -118,7 +126,8 @@ async function callGeminiAPI(messages: ChatMessage[]): Promise<string> {
   const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
   try {
-    const model = genAI.getGenerativeModel({ model: modelName });
+    const { client, modelName } = getGeminiClient();
+    const model = client.getGenerativeModel({ model: modelName });
 
     // Separate the system instruction from the conversation history.
     const systemMessage = messages.find((m) => m.role === 'system');
