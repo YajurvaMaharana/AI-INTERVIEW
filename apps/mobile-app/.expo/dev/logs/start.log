@@ -1717,3 +1717,10 @@
 {"_e":"metro:bundling:progress","_t":1789070424215,"id":"7","progress":0,"total":1,"current":0}
 {"_e":"metro:bundling:progress","_t":1789070424639,"id":"7","progress":0,"total":1,"current":0}
 {"_e":"metro:bundling:done","_t":1789070424691,"id":"7","total":1,"ms":1842.9031}
+{"_e":"root:init","_t":1789071217441,"format":"v0-jsonl","version":"57.0.11"}
+{"_e":"env:mode","_t":1789071217443,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1789071217450,"mode":"development","files":["../..\\..\\.env"],"env":{"DATABASE_URL":"postgresql://postgres:Rapunzel%40Disney%2AWorld%232026%24au@db.yzvrfhvikdclkcjqsyud.supabase.co:5432/postgres","EXPO_PUBLIC_SUPABASE_ANON_KEY":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6dnJmaHZpa2RjbGtjanFzeXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjUwMDAwMDAsImV4cCI6MjAzNTAwMDAwMH0.ZXVKribwIm9sZSI6Inl6dnJmaHZpa2RjbGtjanFzeXVkIiwicm9sZSI6ImFub24i","EXPO_PUBLIC_SUPABASE_URL":"https://yzvrfhvikdclkcjqsyud.supabase.co","GIT_TOKEN":"ghp_fj6tljmWx3MAFEIbTrWSEJ5NLibK2DOzX4","SUPABASE_SERVICE_ROLE_KEY":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6dnJmaHZpa2RjbGtjanFzeXVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTAwMDAwMCwiZXhwIjoyMDM1MDAwMDAwfQ.2s83nA0__2thX8Fs7Bu40ebJo8NELRQNEHSNKT-iyE"}}
+{"_e":"devserver:start","_t":1789071218379,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\src\\app","serverComponents":false,"serverActions":false,"serverRendering":true,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1789071220466,"serverRoot":"../..\\..\\..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":true,"serverActions":false,"serverComponents":false,"reactCompiler":true,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1789071220946,"plugins":[]}
+{"_e":"metro:instantiate","_t":1789071247392,"atlas":false,"workers":6,"host":"::","port":8081}
