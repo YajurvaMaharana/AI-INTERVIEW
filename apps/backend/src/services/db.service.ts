@@ -2,6 +2,7 @@
 // db.service.ts — Supabase client + typed CRUD helpers
 // ---------------------------------------------------------------------------
 
+import 'dotenv/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type {
   User,
@@ -18,24 +19,42 @@ import type {
 } from '../types/database.types';
 
 // ---------------------------------------------------------------------------
-// Supabase client (service-role — full access, server-side only)
+// Supabase client initialization & environment validation
 // ---------------------------------------------------------------------------
 
-const supabaseUrl = process.env['SUPABASE_URL'];
-const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+function cleanEnv(val: string | undefined): string {
+  if (!val) return '';
+  return val.trim().replace(/^["']|["']$/g, '');
+}
 
-if (!supabaseUrl || !supabaseServiceKey) {
+const supabaseUrl = cleanEnv(process.env.SUPABASE_URL);
+const supabaseAnonKey = cleanEnv(process.env.SUPABASE_ANON_KEY);
+const supabaseServiceKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+const supabaseKey = supabaseAnonKey || supabaseServiceKey;
+
+if (!supabaseUrl) {
   throw new Error(
-    'Missing required environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set.',
+    '[db.service] Missing required environment variable: SUPABASE_URL must be set in apps/backend/.env.',
   );
 }
 
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
+if (!supabaseKey) {
+  throw new Error(
+    '[db.service] Missing required environment variable: SUPABASE_ANON_KEY or SUPABASE_SERVICE_ROLE_KEY must be set in apps/backend/.env.',
+  );
+}
+
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
   },
 });
+
+export function getSupabaseClient(): SupabaseClient {
+  return supabase;
+}
 
 // ---------------------------------------------------------------------------
 // Health check

@@ -3,7 +3,8 @@
 // ---------------------------------------------------------------------------
 
 import { Request, Response, NextFunction } from 'express';
-import { createClient, User as SupabaseUser } from '@supabase/supabase-js';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '../services/db.service';
 
 // ---------------------------------------------------------------------------
 // Type augmentation: add `user` to Express Request
@@ -17,28 +18,6 @@ declare global {
     }
   }
 }
-
-// ---------------------------------------------------------------------------
-// Lightweight Supabase client used solely for token verification.
-// Uses the *anon* key (not the service-role key) so the token's own
-// permissions are respected.
-// ---------------------------------------------------------------------------
-
-const supabaseUrl = process.env['SUPABASE_URL'];
-const supabaseAnonKey = process.env['SUPABASE_ANON_KEY'] ?? process.env['SUPABASE_SERVICE_ROLE_KEY'];
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing required environment variables: SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY) must be set.',
-  );
-}
-
-const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
 
 // ---------------------------------------------------------------------------
 // Middleware
@@ -71,7 +50,7 @@ export async function verifyAuth(
     const {
       data: { user },
       error,
-    } = await supabaseAuth.auth.getUser(token);
+    } = await supabase.auth.getUser(token);
 
     if (error || !user) {
       res.status(401).json({
