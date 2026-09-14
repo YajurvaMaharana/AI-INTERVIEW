@@ -158,8 +158,13 @@ export default function InterviewPage() {
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
             <span>AI Guided</span>
           </div>
-          <Link href="/dashboard">
+          <Link href={`/interview/${encodeURIComponent(interviewId)}/feedback`}>
             <Button variant="outline" size="sm" className="text-xs">
+              View Feedback
+            </Button>
+          </Link>
+          <Link href="/dashboard">
+            <Button variant="ghost" size="sm" className="text-xs">
               End Session
             </Button>
           </Link>
