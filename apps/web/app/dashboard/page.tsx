@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -35,6 +37,10 @@ export default async function DashboardPage() {
               Start Practice Interview →
             </Button>
           </Link>
+          <p className="text-muted-foreground">
+            Start a new AI-powered interview session or review your past
+            sessions.
+          </p>
         </div>
       </div>
     </div>
