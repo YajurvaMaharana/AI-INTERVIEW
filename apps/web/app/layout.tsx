@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   title: "AI Interview Practice",
   description:
     "Practice your interview skills with AI-powered mock interviews and get instant feedback",
+  title: "AI Interview Prep",
+  description: "Practice your interview skills with AI",
 };
 
 export default function RootLayout({
@@ -22,6 +24,7 @@ export default function RootLayout({
         <Navbar />
         <main>{children}</main>
       </body>
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }
