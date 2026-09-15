@@ -23,6 +23,8 @@ export interface User {
   email: string;
   display_name: string;
   avatar_url: string | null;
+  bio?: string | null;
+  target_role?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -66,6 +68,8 @@ export interface UserInsert {
   email: string;
   display_name?: string;
   avatar_url?: string | null;
+  bio?: string | null;
+  target_role?: string | null;
 }
 
 export interface InterviewSessionInsert {
@@ -98,6 +102,8 @@ export interface UserUpdate {
   email?: string;
   display_name?: string;
   avatar_url?: string | null;
+  bio?: string | null;
+  target_role?: string | null;
 }
 
 export interface InterviewSessionUpdate {

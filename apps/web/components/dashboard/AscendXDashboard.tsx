@@ -10,12 +10,7 @@ import {
   Info,
   Sparkles,
   ArrowDown,
-  Volume2,
-  CheckCircle2,
-  ExternalLink,
   History,
-  Play,
-  RotateCcw,
 } from "lucide-react";
 import PersonaSelector, { PersonaId } from "@/components/dashboard/PersonaSelector";
 import ResumeJDCard from "@/components/dashboard/ResumeJDCard";
@@ -52,10 +47,8 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
   // User display name
   const userDisplayName = user?.email ? user.email.split("@")[0] : "[User]";
 
-  // Launch AI Interview
   const handleLaunchInterview = async () => {
     setIsLaunching(true);
-    // Route to new interview session setup or start with persona
     router.push(`/interview/new?persona=${selectedPersona}`);
   };
 
@@ -69,18 +62,21 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
   ];
 
   return (
-    <div className="w-full bg-[#ECEEF2] py-4 sm:py-6 px-2 sm:px-4 lg:px-6">
-      {/* Outer Card Container with soft diffuse shadows and generous rounded corners */}
-      <div className="max-w-[1380px] mx-auto bg-[#F9FAFC] border border-slate-200/70 rounded-[28px] p-4 sm:p-6 lg:p-7 shadow-[0_12px_40px_rgba(0,0,0,0.06)] space-y-6">
-        {/* Top Floating Control Bar: Voice Active Switch */}
+    <div className="w-full min-h-[calc(100vh-5rem)] bg-[#ECEEF2] dark:bg-[#0B0F15] py-3 sm:py-5 px-2 sm:px-4 lg:px-6 transition-colors duration-300">
+      {/* Outer Card Container with soft diffuse shadows, generous rounded corners, and dark mode styling */}
+      <div className="max-w-[1380px] mx-auto bg-[#F9FAFC] dark:bg-[#151922] border border-slate-200/80 dark:border-[#222B3A] rounded-[28px] p-4 sm:p-6 lg:p-7 shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.6)] space-y-6 transition-colors duration-300">
+        
+        {/* Top Control Bar: Voice Active Switch */}
         <div className="flex items-center justify-end w-full">
-          <div className="flex items-center gap-2 bg-white/90 px-3 py-1.5 rounded-full border border-slate-200/80 shadow-2xs">
-            <span className="text-xs font-semibold text-slate-700">Voice Active</span>
+          <div className="flex items-center gap-2 bg-white/90 dark:bg-[#1C2230]/90 px-3.5 py-1.5 rounded-full border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+              Voice Active
+            </span>
             <button
               type="button"
               onClick={() => setIsVoiceActive(!isVoiceActive)}
               className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                isVoiceActive ? "bg-[#E87A42]" : "bg-slate-300"
+                isVoiceActive ? "bg-[#E87A42]" : "bg-slate-300 dark:bg-slate-700"
               }`}
               aria-label="Toggle Voice Active"
             >
@@ -95,13 +91,14 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
 
         {/* 3-Column Main Dashboard Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-stretch">
+          
           {/* ========================================================= */}
-          {/* COLUMN 1: LEFT COLUMN (Persona, Resume/JD, Launch) (~28%) */}
+          {/* COLUMN 1: LEFT COLUMN (Persona, Resume/JD, Launch) (~33%) */}
           {/* ========================================================= */}
           <div className="lg:col-span-4 xl:col-span-4 flex flex-col justify-between space-y-5">
             {/* Welcome Card & Title */}
             <div className="space-y-4">
-              <h1 className="text-2xl sm:text-[26px] font-extrabold text-slate-900 tracking-tight">
+              <h1 className="text-2xl sm:text-[26px] font-extrabold text-slate-900 dark:text-white tracking-tight">
                 Welcome Back, {userDisplayName}
               </h1>
 
@@ -117,28 +114,28 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
 
             {/* Launch Action Section */}
             <div className="space-y-2.5 pt-2">
-              {/* Prominent Orange Launch Button */}
+              {/* Glowing Warm Orange Launch Button */}
               <button
                 type="button"
                 onClick={handleLaunchInterview}
                 disabled={isLaunching}
-                className="w-full group relative flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#E8602E] to-[#F17E45] hover:from-[#d85322] hover:to-[#e07038] text-white font-semibold text-sm shadow-[0_6px_20px_rgba(232,96,46,0.35)] transition-all duration-200 active:scale-[0.99] cursor-pointer"
+                className="w-full group relative flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#E8602E] to-[#F17E45] hover:from-[#d85322] hover:to-[#e07038] text-white font-semibold text-sm shadow-[0_6px_22px_rgba(232,96,46,0.4)] dark:shadow-[0_6px_28px_rgba(232,96,46,0.45)] transition-all duration-200 active:scale-[0.99] cursor-pointer"
               >
-                {/* Microphone Icon in dark accent square container */}
-                <div className="w-6 h-6 rounded-lg bg-black/20 flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform">
+                {/* Microphone Icon in accent square badge */}
+                <div className="w-6 h-6 rounded-lg bg-black/20 dark:bg-black/30 flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform">
                   <Mic className="w-3.5 h-3.5" />
                 </div>
                 <span>+ Launch Adaptive AI Interview</span>
               </button>
 
               {/* Status Toggles & Details Row */}
-              <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-600">
-                <div className="flex items-center gap-1 text-slate-700">
-                  <ArrowDown className="w-3.5 h-3.5 text-slate-500" />
+              <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                  <ArrowDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                   <span>Text & Full Voice</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-slate-500">Adaptive Difficulty:</span>
+                  <span className="text-slate-500 dark:text-slate-400">Adaptive Difficulty:</span>
                   <button
                     type="button"
                     onClick={() => setIsAdaptiveOn(!isAdaptiveOn)}
@@ -152,13 +149,13 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
           </div>
 
           {/* ========================================================= */}
-          {/* COLUMN 2: CENTER COLUMN (Live Analytics, Radar, Line Chart) (~44%) */}
+          {/* COLUMN 2: CENTER COLUMN (Live Analytics, Radar, Line Chart) */}
           {/* ========================================================= */}
           <div className="lg:col-span-5 xl:col-span-5 flex flex-col justify-between space-y-4">
             {/* Header: Title + Search & Dropdown Filter */}
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
                   Live Prep Analytics
                 </h2>
 
@@ -171,7 +168,7 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search"
-                      className="w-24 sm:w-28 text-xs py-1.5 pl-2.5 pr-7 rounded-lg border border-slate-200 bg-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-[#E87A42] focus:w-36 transition-all"
+                      className="w-24 sm:w-28 text-xs py-1.5 pl-2.5 pr-7 rounded-lg border border-slate-200 dark:border-[#2D3748] bg-white dark:bg-[#1E2433] text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-1 focus:ring-[#E87A42] focus:w-36 transition-all"
                     />
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-2.5 pointer-events-none" />
                   </div>
@@ -181,14 +178,14 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
                     <button
                       type="button"
                       onClick={() => setIsGraduationOpen(!isGraduationOpen)}
-                      className="flex items-center gap-1 text-xs font-medium text-slate-700 bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg hover:border-slate-300 shadow-2xs whitespace-nowrap"
+                      className="flex items-center gap-1 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-[#1E2433] border border-slate-200 dark:border-[#2D3748] px-2.5 py-1.5 rounded-lg hover:border-slate-300 dark:hover:border-slate-600 shadow-2xs whitespace-nowrap"
                     >
                       <span className="truncate max-w-[90px]">{selectedGraduation}</span>
                       <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                     </button>
 
                     {isGraduationOpen && (
-                      <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 animate-in fade-in-50 zoom-in-95">
+                      <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-[#1E2433] border border-slate-200 dark:border-[#2D3748] rounded-xl shadow-lg z-30 py-1 animate-in fade-in-50 zoom-in-95">
                         {graduationOptions.map((opt) => (
                           <button
                             key={opt}
@@ -199,8 +196,8 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
                             }}
                             className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
                               selectedGraduation === opt
-                                ? "bg-[#FFF6F0] text-[#E87A42] font-semibold"
-                                : "text-slate-700 hover:bg-slate-50"
+                                ? "bg-[#FFF6F0] dark:bg-[#2F2119] text-[#E87A42] font-semibold"
+                                : "text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#252D3E]"
                             }`}
                           >
                             {opt}
@@ -213,16 +210,16 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
               </div>
 
               {/* Sub-badge: Live Interview Workspace Info */}
-              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50/70 border border-slate-100">
-                <div className="w-8 h-8 rounded-full bg-[#FCE8DE] text-[#E87A42] flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50/70 dark:bg-[#1B212D] border border-slate-100 dark:border-[#263040]">
+                <div className="w-8 h-8 rounded-full bg-[#FCE8DE] dark:bg-[#3D251A] text-[#E87A42] flex items-center justify-center shrink-0">
                   <Mic className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-900">Live Interview</span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">Live Interview</span>
                     <Info className="w-3 h-3 text-slate-400" />
                   </div>
-                  <p className="text-[11px] text-slate-500 font-medium">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                     AI Interview Practice and workspace.
                   </p>
                 </div>
@@ -230,9 +227,9 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
             </div>
 
             {/* Visual Analytics 2-Chart Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch bg-white dark:bg-[#181E29] border border-slate-100 dark:border-[#242C3B] rounded-2xl p-4 shadow-sm">
               {/* Radar Chart */}
-              <div className="flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-3">
+              <div className="flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 dark:border-[#242C3B] pb-4 md:pb-0 md:pr-3">
                 <SkillReadinessRadar
                   communication={88}
                   techDepth={78}
@@ -249,12 +246,12 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
           </div>
 
           {/* ========================================================= */}
-          {/* COLUMN 3: RIGHT COLUMN (Insights & Feedback, Telemetry, Rewrite) (~28%) */}
+          {/* COLUMN 3: RIGHT COLUMN (Insights & Feedback, Telemetry, Rewrite) */}
           {/* ========================================================= */}
           <div className="lg:col-span-3 xl:col-span-3 flex flex-col justify-between space-y-4">
             {/* Header Title */}
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
                 Insights & Feedbacks
               </h2>
             </div>
@@ -263,15 +260,15 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
             <DeliveryTelemetry />
 
             {/* AI Coaching Card: STAR Rubric Feedback */}
-            <div className="border border-slate-100 bg-white rounded-2xl p-4 shadow-sm space-y-2">
-              <h3 className="text-xs font-bold text-slate-900 tracking-tight">
+            <div className="border border-slate-100 dark:border-[#242C3B] bg-white dark:bg-[#181E29] rounded-2xl p-4 shadow-sm space-y-2">
+              <h3 className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">
                 AI Coaching: STAR Rubric Feedback
               </h3>
               <div className="space-y-1">
-                <span className="text-[11px] font-bold text-slate-800 block">
+                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block">
                   AI Coaching: STAR Rubric Feedback:
                 </span>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                   Tracking our live view snippets of matters, and assets converted according to STAR method standards with concrete metrics.
                 </p>
               </div>
@@ -286,11 +283,11 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
 
         {/* Past Sessions Drawer Toggle if sessions exist */}
         {initialSessions.length > 0 && (
-          <div className="pt-2 border-t border-slate-200/60">
+          <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800">
             <button
               type="button"
               onClick={() => setShowHistoryDrawer(!showHistoryDrawer)}
-              className="flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-black transition-colors"
+              className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-black dark:hover:text-white transition-colors"
             >
               <History className="w-4 h-4 text-[#E87A42]" />
               <span>
@@ -308,17 +305,17 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
                 {initialSessions.slice(0, 6).map((sess) => (
                   <div
                     key={sess.id}
-                    className="p-3 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between text-xs shadow-2xs"
+                    className="p-3 bg-white dark:bg-[#1C2230] rounded-xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs shadow-2xs"
                   >
                     <div>
-                      <div className="font-bold text-slate-900">{sess.role}</div>
-                      <div className="text-[10px] text-slate-500 capitalize">
+                      <div className="font-bold text-slate-900 dark:text-white">{sess.role}</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">
                         {sess.difficulty} • {sess.status}
                       </div>
                     </div>
                     <Link
                       href={`/interview/${sess.id}`}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#FFF6F0] hover:text-[#E87A42] font-semibold transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#FFF6F0] dark:hover:bg-[#2C1E18] hover:text-[#E87A42] font-semibold transition-colors"
                     >
                       Resume
                     </Link>

@@ -104,7 +104,8 @@ export default function SlidingAuth({ initialMode }: SlidingAuthProps) {
   const handleAuthSuccess = async (
     user: any,
     session: any,
-    displayNameOverride?: string
+    displayNameOverride?: string,
+    isNewRegistration?: boolean
   ) => {
     if (!user || isRedirectingRef.current) return;
     isRedirectingRef.current = true;
@@ -132,7 +133,11 @@ export default function SlidingAuth({ initialMode }: SlidingAuthProps) {
       } catch {}
     }
 
-    setSuccessMessage("Account authenticated! Entering AscendX...");
+    setSuccessMessage(
+      isNewRegistration
+        ? "Account created! Redirecting to profile setup..."
+        : "Account authenticated! Entering AscendX..."
+    );
 
     // Execute centralized user sync & upsert
     try {
@@ -141,8 +146,10 @@ export default function SlidingAuth({ initialMode }: SlidingAuthProps) {
       console.warn("[SlidingAuth] Sync notice:", syncErr);
     }
 
-    // Explicit hard redirect requested by user
-    window.location.href = "/dashboard";
+    // Explicit redirect: new registrations go straight to profile completion
+    window.location.href = isNewRegistration
+      ? "/profile?onboarding=true"
+      : "/dashboard";
   };
 
   // Sign In submit handler
@@ -292,7 +299,7 @@ export default function SlidingAuth({ initialMode }: SlidingAuthProps) {
       }
 
       if (activeUser) {
-        await handleAuthSuccess(activeUser, activeSession, cleanName);
+        await handleAuthSuccess(activeUser, activeSession, cleanName, true);
       } else {
         const fallbackId = emailToUUID(cleanEmail);
         const fallbackUser = {
@@ -303,7 +310,8 @@ export default function SlidingAuth({ initialMode }: SlidingAuthProps) {
         await handleAuthSuccess(
           fallbackUser,
           { user: fallbackUser, access_token: "mock-token" },
-          cleanName
+          cleanName,
+          true
         );
       }
     } catch (err: any) {
@@ -319,7 +327,8 @@ export default function SlidingAuth({ initialMode }: SlidingAuthProps) {
       await handleAuthSuccess(
         fallbackUser,
         { user: fallbackUser, access_token: "mock-token" },
-        cleanName
+        cleanName,
+        true
       );
     }
   };

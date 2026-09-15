@@ -48,7 +48,7 @@ function TelemetryBox({ label, value, barColor, bgColor, barHeights }: Telemetry
 export default function DeliveryTelemetry() {
   return (
     <div className="w-full space-y-2">
-      <h3 className="text-xs font-bold text-slate-900 tracking-tight">
+      <h3 className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">
         Delivery Telemetry
       </h3>
       <div className="grid grid-cols-2 gap-2">

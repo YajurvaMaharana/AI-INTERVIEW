@@ -23,10 +23,6 @@ export default function SkillReadinessRadar({
   const radius = 90;
 
   // Scale 0-100 to coordinates
-  // Top: Communication (angle = -90 deg / -PI/2)
-  // Right: STAR Storytelling (angle = 0 deg)
-  // Bottom: Delivery Pace (angle = 90 deg / PI/2)
-  // Left: Tech Depth (angle = 180 deg / PI)
   const topX = center;
   const topY = center - (radius * communication) / 100;
 
@@ -44,7 +40,7 @@ export default function SkillReadinessRadar({
   return (
     <div className="flex flex-col items-center justify-between w-full h-full min-h-[300px]">
       <div className="w-full flex items-center justify-between pb-1">
-        <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
           Skill Readiness Radar Chart
         </h3>
       </div>
@@ -55,11 +51,11 @@ export default function SkillReadinessRadar({
           className="w-full max-w-[270px] h-auto overflow-visible select-none"
         >
           <defs>
-            {/* Soft olive/greenish radial backdrop matching reference image */}
+            {/* Soft olive/greenish radial backdrop */}
             <radialGradient id="radarBackdrop" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#A4B998" stopOpacity="0.4" />
-              <stop offset="60%" stopColor="#BACDB0" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#E2EBE0" stopOpacity="0.05" />
+              <stop offset="0%" stopColor="#4A6142" stopOpacity="0.35" />
+              <stop offset="60%" stopColor="#2F3F2A" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#1E271B" stopOpacity="0.02" />
             </radialGradient>
 
             {/* Warm Orange Gradient for the active skill polygon */}
@@ -71,11 +67,11 @@ export default function SkillReadinessRadar({
 
             {/* Dot Glow filter */}
             <filter id="radarDotGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#EA580C" floodOpacity="0.4" />
+              <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#EA580C" floodOpacity="0.6" />
             </filter>
           </defs>
 
-          {/* Organic soft green circular backdrop glow */}
+          {/* Organic circular backdrop glow */}
           <circle cx={center} cy={center} r={radius + 4} fill="url(#radarBackdrop)" />
 
           {/* Concentric rings */}
@@ -86,10 +82,11 @@ export default function SkillReadinessRadar({
               cy={center}
               r={radius * level}
               fill="none"
-              stroke="#CBD5E1"
+              stroke="currentColor"
+              className="text-slate-300 dark:text-slate-700/80"
               strokeWidth="0.8"
               strokeDasharray={level === 1 ? "none" : "2,2"}
-              opacity="0.75"
+              opacity="0.8"
             />
           ))}
 
@@ -99,7 +96,8 @@ export default function SkillReadinessRadar({
             y1={center - radius}
             x2={center}
             y2={center + radius}
-            stroke="#94A3B8"
+            stroke="currentColor"
+            className="text-slate-400 dark:text-slate-600"
             strokeWidth="1"
             strokeDasharray="2,2"
             opacity="0.6"
@@ -109,7 +107,8 @@ export default function SkillReadinessRadar({
             y1={center}
             x2={center + radius}
             y2={center}
-            stroke="#94A3B8"
+            stroke="currentColor"
+            className="text-slate-400 dark:text-slate-600"
             strokeWidth="1"
             strokeDasharray="2,2"
             opacity="0.6"
@@ -178,7 +177,7 @@ export default function SkillReadinessRadar({
             x={center}
             y={center - radius - 12}
             textAnchor="middle"
-            className="text-[11px] font-semibold fill-slate-800 tracking-tight"
+            className="text-[11px] font-semibold fill-slate-800 dark:fill-slate-200 tracking-tight"
           >
             Communication
           </text>
@@ -188,7 +187,7 @@ export default function SkillReadinessRadar({
             x={center}
             y={center + radius + 18}
             textAnchor="middle"
-            className="text-[11px] font-semibold fill-slate-800 tracking-tight"
+            className="text-[11px] font-semibold fill-slate-800 dark:fill-slate-200 tracking-tight"
           >
             Delivery Pace
           </text>
@@ -199,7 +198,7 @@ export default function SkillReadinessRadar({
             y={center}
             textAnchor="middle"
             transform={`rotate(-90 ${center - radius - 16} ${center})`}
-            className="text-[11px] font-semibold fill-slate-800 tracking-tight"
+            className="text-[11px] font-semibold fill-slate-800 dark:fill-slate-200 tracking-tight"
           >
             Tech Depth
           </text>
@@ -210,7 +209,7 @@ export default function SkillReadinessRadar({
             y={center}
             textAnchor="middle"
             transform={`rotate(90 ${center + radius + 16} ${center})`}
-            className="text-[11px] font-semibold fill-slate-800 tracking-tight"
+            className="text-[11px] font-semibold fill-slate-800 dark:fill-slate-200 tracking-tight"
           >
             STAR Storytelling
           </text>
@@ -218,7 +217,7 @@ export default function SkillReadinessRadar({
 
         {/* Hover Tooltip / Score Badge */}
         {hoveredAxis && (
-          <div className="absolute top-2 bg-slate-900 text-white text-xs px-2.5 py-1 rounded-md shadow-md animate-fade-in pointer-events-none">
+          <div className="absolute top-2 bg-slate-900 dark:bg-slate-800 text-white text-xs px-2.5 py-1 rounded-md shadow-md animate-fade-in pointer-events-none border border-slate-700">
             {hoveredAxis}:{" "}
             <span className="font-bold text-amber-400">
               {hoveredAxis === "Communication"

@@ -16,9 +16,16 @@ import { isValidUUID, emailToUUID } from "@/lib/supabase/env";
 export interface NormalizedUser {
   id: string;
   email?: string;
+  display_name?: string;
+  avatar_url?: string | null;
+  bio?: string;
+  target_role?: string;
   user_metadata?: {
     display_name?: string;
     full_name?: string;
+    bio?: string;
+    target_role?: string;
+    avatar_url?: string | null;
     [key: string]: any;
   };
   [key: string]: any;
@@ -34,6 +41,12 @@ export interface AuthContextType {
     accessToken?: string,
     displayNameOverride?: string
   ) => Promise<{ id: string; email: string; display_name: string }>;
+  updateUserProfile: (updates: {
+    display_name?: string;
+    bio?: string;
+    target_role?: string;
+    avatar_url?: string | null;
+  }) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -65,16 +78,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         displayNameOverride ||
         rawUser.user_metadata?.display_name ||
         rawUser.user_metadata?.full_name ||
+        rawUser.display_name ||
         (email.includes("@") ? email.split("@")[0] : "Candidate");
+
+      const bio = rawUser.bio || rawUser.user_metadata?.bio || "";
+      const targetRole = rawUser.target_role || rawUser.user_metadata?.target_role || "Full-Stack Software Engineer";
+      const avatarUrl = rawUser.avatar_url || rawUser.user_metadata?.avatar_url || null;
 
       const userPayload = {
         id,
         email,
         display_name: displayName,
-        avatar_url: rawUser.user_metadata?.avatar_url || null,
+        avatar_url: avatarUrl,
+        bio,
+        target_role: targetRole,
         user_metadata: {
           display_name: displayName,
           full_name: displayName,
+          bio,
+          target_role: targetRole,
+          avatar_url: avatarUrl,
           ...(rawUser.user_metadata || {}),
         },
       };
@@ -101,6 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email,
               display_name: displayName,
               avatar_url: userPayload.avatar_url,
+              bio,
+              target_role: targetRole,
               updated_at: new Date().toISOString(),
             },
             { onConflict: "id" }
@@ -123,6 +148,99 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { id, email, display_name: displayName };
     },
     []
+  );
+
+  // Update candidate profile with direct Supabase + local cache sync
+  const updateUserProfile = useCallback(
+    async (updates: {
+      display_name?: string;
+      bio?: string;
+      target_role?: string;
+      avatar_url?: string | null;
+    }): Promise<boolean> => {
+      if (!user?.id) return false;
+
+      const currentId = user.id;
+      const currentEmail = user.email || "candidate@example.com";
+      const newDisplayName = updates.display_name !== undefined ? updates.display_name : (user as any).display_name || "Candidate";
+      const newBio = updates.bio !== undefined ? updates.bio : (user as any).bio || "";
+      const newRole = updates.target_role !== undefined ? updates.target_role : (user as any).target_role || "Full-Stack Software Engineer";
+      const newAvatar = updates.avatar_url !== undefined ? updates.avatar_url : (user as any).avatar_url || null;
+
+      const updatedUserPayload: NormalizedUser = {
+        ...user,
+        id: currentId,
+        email: currentEmail,
+        display_name: newDisplayName,
+        bio: newBio,
+        target_role: newRole,
+        avatar_url: newAvatar,
+        user_metadata: {
+          ...(user.user_metadata || {}),
+          display_name: newDisplayName,
+          full_name: newDisplayName,
+          bio: newBio,
+          target_role: newRole,
+          avatar_url: newAvatar,
+        },
+      };
+
+      // 1. Update local state & storage immediately
+      setUser(updatedUserPayload);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("sb-mock-user", JSON.stringify(updatedUserPayload));
+          document.cookie = `sb-mock-auth=${encodeURIComponent(
+            JSON.stringify(updatedUserPayload)
+          )}; path=/; max-age=604800; SameSite=Lax`;
+        } catch {}
+      }
+
+      // 2. Persist to Supabase and API
+      const supabase = createClient();
+      try {
+        await Promise.allSettled([
+          supabase.from("users").upsert(
+            {
+              id: currentId,
+              email: currentEmail,
+              display_name: newDisplayName,
+              bio: newBio,
+              target_role: newRole,
+              avatar_url: newAvatar,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "id" }
+          ),
+          supabase.auth.updateUser({
+            data: {
+              display_name: newDisplayName,
+              full_name: newDisplayName,
+              bio: newBio,
+              target_role: newRole,
+              avatar_url: newAvatar,
+            },
+          }),
+          fetch("/api/user/profile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: currentId,
+              email: currentEmail,
+              display_name: newDisplayName,
+              bio: newBio,
+              target_role: newRole,
+              avatar_url: newAvatar,
+            }),
+          }),
+        ]);
+        return true;
+      } catch (err) {
+        console.warn("[AuthContext] Profile update background error:", err);
+        return true; // Local state is already updated
+      }
+    },
+    [user]
   );
 
   // Clean, single initialization on mount
@@ -228,6 +346,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     signOut,
     syncUser,
+    updateUserProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

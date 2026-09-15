@@ -139,8 +139,8 @@ export default function SignupForm() {
       // Synchronize to public.users table and local persistence
       await syncUser(resolvedUser, candidateSession?.access_token);
 
-      // Explicit hard redirect to dashboard
-      window.location.href = "/dashboard";
+      // Explicit redirect to profile onboarding completion page
+      window.location.href = "/profile?onboarding=true";
     } catch (err: any) {
       setServerError(
         err?.message || "Failed to create account. Please check your network connection."

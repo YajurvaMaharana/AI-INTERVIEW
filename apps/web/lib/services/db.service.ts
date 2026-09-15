@@ -157,6 +157,8 @@ export async function syncUserToDatabase(
     user_metadata?: Record<string, any>;
     display_name?: string;
     avatar_url?: string | null;
+    bio?: string | null;
+    target_role?: string | null;
   },
   accessToken?: string
 ): Promise<User | null> {
@@ -171,6 +173,8 @@ export async function syncUserToDatabase(
     user.user_metadata?.full_name ||
     (email.includes('@') ? email.split('@')[0] : 'Candidate');
   const avatarUrl = user.avatar_url || user.user_metadata?.avatar_url || null;
+  const bio = user.bio !== undefined ? user.bio : (user.user_metadata?.bio || '');
+  const targetRole = user.target_role !== undefined ? user.target_role : (user.user_metadata?.target_role || '');
 
   // If user provided a real access token, use a scoped client so auth.uid() passes RLS
   let scopedClient: SupabaseClient | null = null;
@@ -201,6 +205,8 @@ export async function syncUserToDatabase(
             email,
             display_name: displayName,
             avatar_url: avatarUrl,
+            bio,
+            target_role: targetRole,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'id' }
@@ -223,6 +229,8 @@ export async function syncUserToDatabase(
               email,
               display_name: displayName,
               avatar_url: avatarUrl,
+              bio,
+              target_role: targetRole,
               updated_at: new Date().toISOString(),
             })
             .eq('id', userId)
@@ -250,6 +258,8 @@ export async function syncUserToDatabase(
     email,
     display_name: displayName,
     avatar_url: avatarUrl,
+    bio: bio || existing?.bio || '',
+    target_role: targetRole || existing?.target_role || '',
     created_at: existing?.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -269,6 +279,8 @@ export async function createUser(data: UserInsert): Promise<User> {
           email: data.email,
           display_name: data.display_name || '',
           avatar_url: data.avatar_url || null,
+          bio: data.bio || '',
+          target_role: data.target_role || '',
         })
         .select()
         .single();
@@ -290,6 +302,8 @@ export async function createUser(data: UserInsert): Promise<User> {
     email: data.email,
     display_name: data.display_name || '',
     avatar_url: data.avatar_url || null,
+    bio: data.bio || '',
+    target_role: data.target_role || '',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -303,7 +317,7 @@ export async function getUserById(id: string): Promise<User | null> {
     try {
       const { data: user, error } = await client
         .from('users')
-        .select()
+        .select('*')
         .eq('id', id)
         .single();
 
@@ -347,6 +361,8 @@ export async function updateUser(id: string, data: UserUpdate): Promise<User> {
     email: data.email || existing?.email || '',
     display_name: data.display_name ?? existing?.display_name ?? '',
     avatar_url: data.avatar_url !== undefined ? data.avatar_url : (existing?.avatar_url ?? null),
+    bio: data.bio !== undefined ? data.bio : (existing?.bio ?? ''),
+    target_role: data.target_role !== undefined ? data.target_role : (existing?.target_role ?? ''),
     created_at: existing?.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

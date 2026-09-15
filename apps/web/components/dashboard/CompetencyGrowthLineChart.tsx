@@ -33,12 +33,9 @@ export default function CompetencyGrowthLineChart() {
   const chartHeight = svgHeight - paddingTop - paddingBottom;
 
   // Coordinate mappers
-  // X: 0 to 250
   const mapX = (xVal: number) => paddingLeft + (xVal / 250) * chartWidth;
-  // Y: 0 to 100 (invert for SVG)
   const mapY = (yVal: number) => paddingTop + chartHeight - (yVal / 100) * chartHeight;
 
-  // Build smooth cubic bezier curve
   // Points
   const points = defaultData.map((d) => ({
     xCoord: mapX(d.x),
@@ -71,14 +68,14 @@ export default function CompetencyGrowthLineChart() {
     <div className="flex flex-col justify-between w-full h-full min-h-[300px]">
       {/* Header with Title and Toggle */}
       <div className="flex items-center justify-between w-full pb-1">
-        <h3 className="text-sm font-bold text-slate-900 tracking-tight leading-snug max-w-[200px]">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight leading-snug max-w-[200px]">
           Competency Score Growth Over Time
         </h3>
         <button
           type="button"
           onClick={() => setActiveToggle(!activeToggle)}
           className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-hidden ${
-            activeToggle ? "bg-slate-300" : "bg-slate-200"
+            activeToggle ? "bg-slate-300 dark:bg-slate-700" : "bg-slate-200 dark:bg-slate-800"
           }`}
           aria-label="Toggle growth metric"
         >
@@ -105,7 +102,7 @@ export default function CompetencyGrowthLineChart() {
             </linearGradient>
 
             <filter id="pointGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#EA580C" floodOpacity="0.5" />
+              <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#EA580C" floodOpacity="0.6" />
             </filter>
           </defs>
 
@@ -119,14 +116,15 @@ export default function CompetencyGrowthLineChart() {
                   y1={y}
                   x2={svgWidth - paddingRight}
                   y2={y}
-                  stroke="#E2E8F0"
+                  stroke="currentColor"
+                  className="text-slate-200 dark:text-slate-800"
                   strokeWidth="0.8"
                 />
                 <text
                   x={paddingLeft - 6}
                   y={y + 3.5}
                   textAnchor="end"
-                  className="text-[10px] fill-slate-500 font-medium"
+                  className="text-[10px] fill-slate-500 dark:fill-slate-400 font-medium"
                 >
                   {val}
                 </text>
@@ -143,7 +141,7 @@ export default function CompetencyGrowthLineChart() {
                 x={x}
                 y={svgHeight - 10}
                 textAnchor="middle"
-                className="text-[10px] fill-slate-500 font-medium"
+                className="text-[10px] fill-slate-500 dark:fill-slate-400 font-medium"
               >
                 {val}
               </text>
@@ -171,9 +169,7 @@ export default function CompetencyGrowthLineChart() {
               onMouseEnter={() => setHoveredPoint(pt.raw)}
               onMouseLeave={() => setHoveredPoint(null)}
             >
-              {/* Invisible larger target for easy hover */}
               <circle cx={pt.xCoord} cy={pt.yCoord} r="12" fill="transparent" />
-              {/* Visible Point */}
               <circle
                 cx={pt.xCoord}
                 cy={pt.yCoord}
@@ -196,9 +192,9 @@ export default function CompetencyGrowthLineChart() {
 
         {/* Hover Tooltip */}
         {hoveredPoint && (
-          <div className="absolute top-0 right-2 bg-slate-900 text-white text-xs px-2.5 py-1.5 rounded-md shadow-md animate-fade-in pointer-events-none">
+          <div className="absolute top-0 right-2 bg-slate-900 dark:bg-slate-800 border border-slate-700 text-white text-xs px-2.5 py-1.5 rounded-md shadow-md animate-fade-in pointer-events-none">
             <div className="font-bold text-amber-400">Score: {hoveredPoint.y}/100</div>
-            <div className="text-[10px] text-slate-300">{hoveredPoint.label}</div>
+            <div className="text-[10px] text-slate-300 dark:text-slate-400">{hoveredPoint.label}</div>
           </div>
         )}
       </div>

@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,13 +26,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
-        <AuthProvider>
-          <Navbar />
-          <Suspense fallback={null}>
-            <main>{children}</main>
-          </Suspense>
-        </AuthProvider>
+      <body className={`${inter.className} min-h-screen transition-colors duration-200 bg-[#ECEEF2] dark:bg-[#0B0F15] text-slate-900 dark:text-slate-100`} suppressHydrationWarning>
+        <ThemeProvider>
+          <AuthProvider>
+            <Navbar />
+            <Suspense fallback={null}>
+              <main>{children}</main>
+            </Suspense>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

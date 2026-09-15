@@ -78,12 +78,12 @@ export default function AscendXLogo({ className = "", size = "md" }: AscendXLogo
 
       {/* Brand Text Stack */}
       <div className="flex flex-col justify-center leading-none">
-        <div className={`font-black tracking-tight text-slate-900 flex items-center ${textSizes[size]}`}>
+        <div className={`font-black tracking-tight text-slate-900 dark:text-white flex items-center ${textSizes[size]}`}>
           <span>ASCEND</span>
           <span className="text-[#E8602E] font-black">X</span>
         </div>
         <span
-          className={`font-bold tracking-[0.18em] text-slate-500 uppercase mt-0.5 ${subtextSizes[size]}`}
+          className={`font-bold tracking-[0.18em] text-slate-500 dark:text-slate-400 uppercase mt-0.5 ${subtextSizes[size]}`}
         >
           AI INTERVIEW PLATFORM
         </span>
