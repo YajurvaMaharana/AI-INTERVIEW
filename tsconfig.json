@@ -1,17 +1,38 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "target": "es2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
     "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
-    }
+      "@/*": ["./src/*", "./apps/web/*"],
+      "react": ["./apps/web/node_modules/@types/react"],
+      "react/*": ["./apps/web/node_modules/@types/react/*"],
+      "react-dom": ["./apps/web/node_modules/@types/react-dom"],
+      "react-dom/*": ["./apps/web/node_modules/@types/react-dom/*"],
+      "*": ["./apps/web/node_modules/*", "./node_modules/*"]
+    },
+    "typeRoots": [
+      "./apps/web/node_modules/@types",
+      "./node_modules/@types"
+    ]
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "apps"
   ]
 }
