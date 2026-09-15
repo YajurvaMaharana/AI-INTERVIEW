@@ -35,20 +35,12 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 };
 
 /**
- * POST to the backend /interviews endpoint.
- * Falls back to the mock implementation when the backend is unreachable.
+ * POST to the Next.js /api/interviews endpoint.
  */
 async function createInterview(
   data: InterviewSetupValues
 ): Promise<InterviewCreateResponse> {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-  // Use mock when no API URL is configured
-  if (!API_URL) {
-    return mockCreateInterview(data);
-  }
-
-  const res = await fetch(`${API_URL}/interviews`, {
+  const res = await fetch("/api/interviews", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),

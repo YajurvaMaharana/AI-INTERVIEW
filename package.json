@@ -2,11 +2,13 @@
   "name": "ai-interview",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "pnpm@11.18.0",
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint"
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web",
+    "lint": "npm run lint --workspace=apps/web"
   },
   "devDependencies": {
     "turbo": "^2.10.7"
@@ -15,6 +17,11 @@
     "node": ">=18"
   },
   "dependencies": {
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "@google/genai": "^2.22.0"
+  },
+  "overrides": {
+    "@types/react": "18.2.79",
+    "@types/react-dom": "18.2.25"
   }
 }

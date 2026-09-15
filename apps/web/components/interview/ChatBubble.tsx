@@ -59,7 +59,7 @@ export function ChatBubble({ message, className }: ChatBubbleProps) {
           {isAI ? (
             <span className="flex items-center gap-1 font-semibold text-foreground/90">
               <Sparkles className="h-3 w-3 text-primary" />
-              AI Interviewer
+              AscendX Interviewer
             </span>
           ) : (
             <span className="font-semibold text-foreground/90">You</span>

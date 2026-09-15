@@ -1,16 +1,21 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
+import { AuthProvider } from "@/context/AuthContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AI Interview Practice",
+  title: "AscendX - AI Mock Interview Platform",
   description:
-    "Practice your interview skills with AI-powered mock interviews and get instant feedback",
-  title: "AI Interview Prep",
-  description: "Practice your interview skills with AI",
+    "Master technical and behavioral interviews with AscendX. Adaptive AI mock interviews with real-time feedback.",
+  openGraph: {
+    title: "AscendX - AI Mock Interview Platform",
+    description:
+      "Master technical and behavioral interviews with AscendX. Adaptive AI mock interviews with real-time feedback.",
+  },
 };
 
 export default function RootLayout({
@@ -19,12 +24,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <Navbar />
-        <main>{children}</main>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
+        <AuthProvider>
+          <Navbar />
+          <Suspense fallback={null}>
+            <main>{children}</main>
+          </Suspense>
+        </AuthProvider>
       </body>
-      <body className={inter.className}>{children}</body>
     </html>
   );
 }

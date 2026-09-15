@@ -1,67 +1,50 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import type { User } from "@supabase/supabase-js";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Mountain } from "lucide-react";
 
 export default function Navbar() {
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const pathname = usePathname();
+  const { user, isLoading, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient();
-
-    // Get initial user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      setIsLoading(false);
-    });
-
-    // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    setIsMounted(true);
   }, []);
 
   async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    setUser(null);
-    router.push("/login");
-    router.refresh();
+    await signOut();
   }
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         {/* Brand */}
-        <Link href="/" className="flex items-center space-x-2">
-          <span className="text-xl font-bold tracking-tight">
-            AI Interview
-          </span>
+        <Link href="/" className="flex items-center space-x-2.5 group">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs transition-transform group-hover:scale-105">
+            <Mountain className="h-5 w-5" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+              AscendX
+            </span>
+          </div>
         </Link>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex md:items-center md:space-x-4">
-          {isLoading ? (
+          {!isMounted || isLoading ? (
             <div className="h-9 w-20 animate-pulse rounded-md bg-muted" />
           ) : user ? (
             <>
-              <Link href="/dashboard">
-                <Button variant="ghost">Dashboard</Button>
-              </Link>
+              <Button asChild variant="ghost">
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
               <span className="text-sm text-muted-foreground truncate max-w-[200px]">
                 {user.email}
               </span>
@@ -71,12 +54,12 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link href="/login">
-                <Button variant="ghost">Sign in</Button>
-              </Link>
-              <Link href="/signup">
-                <Button>Sign up</Button>
-              </Link>
+              <Button asChild variant="ghost">
+                <Link href="/auth">Sign In</Link>
+              </Button>
+              <Button asChild className="shadow-xs">
+                <Link href="/auth?mode=signup">Sign Up</Link>
+              </Button>
             </>
           )}
         </div>
@@ -99,21 +82,25 @@ export default function Navbar() {
       {isMobileMenuOpen && (
         <div className="border-t md:hidden">
           <div className="container space-y-2 py-4">
-            {isLoading ? (
+            {!isMounted || isLoading ? (
               <div className="h-9 w-full animate-pulse rounded-md bg-muted" />
             ) : user ? (
               <>
                 <p className="px-2 text-sm text-muted-foreground truncate">
                   {user.email}
                 </p>
-                <Link
-                  href="/dashboard"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="w-full justify-start"
                 >
-                  <Button variant="ghost" className="w-full justify-start">
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
                     Dashboard
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
                 <Button
                   variant="outline"
                   className="w-full"
@@ -127,20 +114,29 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="w-full justify-start"
                 >
-                  <Button variant="ghost" className="w-full justify-start">
-                    Sign in
-                  </Button>
-                </Link>
-                <Link
-                  href="/signup"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  <Link
+                    href="/auth"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  className="w-full"
                 >
-                  <Button className="w-full">Sign up</Button>
-                </Link>
+                  <Link
+                    href="/auth?mode=signup"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign Up
+                  </Link>
+                </Button>
               </>
             )}
           </div>

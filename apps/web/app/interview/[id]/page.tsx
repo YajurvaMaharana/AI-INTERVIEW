@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Bot,
@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Clock,
   ShieldCheck,
+  Award,
 } from "lucide-react";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { ChatBubble, type ChatMessage } from "@/components/interview/ChatBubble";
@@ -21,10 +22,20 @@ interface InterviewResponse {
   message: string;
 }
 
+interface SessionData {
+  id: string;
+  role: string;
+  difficulty: string;
+  type: string;
+  status: string;
+}
+
 export default function InterviewPage() {
   const params = useParams();
+  const router = useRouter();
   const interviewId = (params?.id as string) || "demo-session";
 
+  const [session, setSession] = React.useState<SessionData | null>(null);
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
       id: "initial-greeting",
@@ -39,8 +50,41 @@ export default function InterviewPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [lastFailedMessage, setLastFailedMessage] = React.useState<string | null>(null);
 
+  // Load existing session and messages from Supabase via API route
+  React.useEffect(() => {
+    let isMounted = true;
+    async function loadSessionData() {
+      try {
+        const res = await fetch(`/api/interviews/${encodeURIComponent(interviewId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            if (data.session) {
+              setSession(data.session);
+            }
+            if (Array.isArray(data.messages) && data.messages.length > 0) {
+              const formattedMsgs: ChatMessage[] = data.messages.map((m: any, i: number) => ({
+                id: m.id || `msg-${i}`,
+                role: m.sender_role === "ai" ? "assistant" : "user",
+                content: m.content,
+                timestamp: m.created_at ? new Date(m.created_at) : new Date(),
+              }));
+              setMessages(formattedMsgs);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Could not preload session messages:", err);
+      }
+    }
+    loadSessionData();
+    return () => {
+      isMounted = false;
+    };
+  }, [interviewId]);
+
   // Auto-scroll container as messages arrive or loading status changes
-  const { containerRef, bottomRef, scrollToBottom } = useAutoScroll([
+  const { containerRef, bottomRef } = useAutoScroll([
     messages,
     isLoading,
     error,
@@ -62,8 +106,7 @@ export default function InterviewPage() {
     setError(null);
     setLastFailedMessage(null);
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-    const endpoint = `${API_URL}/interviews/${encodeURIComponent(interviewId)}/message`;
+    const endpoint = `/api/interviews/${encodeURIComponent(interviewId)}/message`;
 
     try {
       const response = await fetch(endpoint, {
@@ -101,8 +144,8 @@ export default function InterviewPage() {
       const errorMessage =
         err instanceof Error
           ? err.message
-          : "Something went wrong. Please try again.";
-      setError(`Failed to receive response from AI: ${errorMessage}`);
+          : "Network connection issue. Please try again.";
+      setError(`Failed to receive response: ${errorMessage}`);
       setLastFailedMessage(userMessage.content);
     } finally {
       setIsLoading(false);
@@ -117,21 +160,26 @@ export default function InterviewPage() {
     }
   };
 
+  const handleEndSession = () => {
+    router.push(`/interview/${encodeURIComponent(interviewId)}/feedback`);
+  };
+
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
       {/* ── Top Session Header ── */}
       <header className="flex shrink-0 items-center justify-between border-b border-border/70 bg-card/60 px-4 py-3 backdrop-blur-md sm:px-6">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-muted-foreground hover:text-foreground"
-            >
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-muted-foreground hover:text-foreground"
+          >
+            <Link href="/dashboard">
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Dashboard</span>
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <div className="h-4 w-px bg-border/80" />
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -140,10 +188,10 @@ export default function InterviewPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-sm font-semibold sm:text-base">
-                  Live Mock Interview
+                  {session?.role ? `${session.role} Interview` : "Live Mock Interview"}
                 </h1>
                 <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                  Active
+                  {session?.difficulty ? `${session.difficulty.toUpperCase()}` : "Active"}
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground">
@@ -158,16 +206,15 @@ export default function InterviewPage() {
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
             <span>AI Guided</span>
           </div>
-          <Link href={`/interview/${encodeURIComponent(interviewId)}/feedback`}>
-            <Button variant="outline" size="sm" className="text-xs">
-              View Feedback
-            </Button>
-          </Link>
-          <Link href="/dashboard">
-            <Button variant="ghost" size="sm" className="text-xs">
-              End Session
-            </Button>
-          </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleEndSession}
+            className="gap-1.5 text-xs text-foreground hover:bg-primary/10"
+          >
+            <Award className="h-3.5 w-3.5 text-primary" />
+            <span>End & View Feedback</span>
+          </Button>
         </div>
       </header>
 
@@ -182,7 +229,7 @@ export default function InterviewPage() {
           <div className="rounded-xl border border-border/60 bg-muted/40 p-3 text-center text-xs text-muted-foreground">
             <p className="flex items-center justify-center gap-1.5 font-medium">
               <Clock className="h-3.5 w-3.5 text-primary" />
-              Practice mode is active. Take your time to formulate clear and structured answers.
+              Practice mode is active. Answer thoughtfully using the STAR method for behavioral topics or describing trade-offs for technical problems.
             </p>
           </div>
 
@@ -207,9 +254,9 @@ export default function InterviewPage() {
                 <div className="flex items-center gap-1 px-1 text-xs text-muted-foreground">
                   <Sparkles className="h-3 w-3 text-primary" />
                   <span className="font-semibold text-foreground/90">
-                    AI Interviewer
+                    AscendX Interviewer
                   </span>
-                  <span className="text-[11px] text-muted-foreground">is formulating feedback...</span>
+                  <span className="text-[11px] text-muted-foreground">is evaluating and formulating response...</span>
                 </div>
                 <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-xs border border-border/80 bg-card px-4 py-3.5 shadow-xs">
                   <span className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import SetupForm from "@/components/interview/SetupForm";
 
 export const metadata: Metadata = {
-  title: "New Interview | AI Interview",
+  title: "New Interview | AscendX",
   description:
-    "Configure your mock interview — choose type, role, and difficulty to get started",
+    "Configure your mock interview — choose type, role, and difficulty to get started with AscendX",
 };
 
 export default function NewInterviewPage() {

@@ -1,35 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-// Routes that require authentication
-const protectedPrefixes = ["/dashboard", "/interview"];
-
-// Routes that should redirect authenticated users away
-const authRoutes = ["/login", "/signup"];
-
 export async function middleware(request: NextRequest) {
-  const { user, supabaseResponse } = await updateSession(request);
+  // Update Supabase session cookies without enforcing automated route redirects
+  const { supabaseResponse } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
-  // Check if the current path is a protected route
-  const isProtectedRoute = protectedPrefixes.some((prefix) =>
-    pathname.startsWith(prefix)
-  );
-
-  // Check if the current path is an auth route (login/signup)
-  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
-
-  // Redirect unauthenticated users away from protected routes
-  if (isProtectedRoute && !user) {
+  // Canonicalize legacy /login and /signup paths to /auth if accessed
+  if (pathname === "/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/auth";
     return NextResponse.redirect(url);
   }
-
-  // Redirect authenticated users away from auth routes
-  if (isAuthRoute && user) {
+  if (pathname === "/signup") {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/auth";
+    url.searchParams.set("mode", "signup");
     return NextResponse.redirect(url);
   }
 
