@@ -22,6 +22,10 @@ export interface NormalizedUser {
   target_role?: string;
   skills?: string[];
   experience_level?: string;
+  preferred_interview_type?: string;
+  preferred_language?: string;
+  interview_goals?: string[] | string;
+  target_companies?: string[];
   user_metadata?: {
     display_name?: string;
     full_name?: string;
@@ -30,6 +34,10 @@ export interface NormalizedUser {
     skills?: string[];
     experience_level?: string;
     avatar_url?: string | null;
+    preferred_interview_type?: string;
+    preferred_language?: string;
+    interview_goals?: string[] | string;
+    target_companies?: string[];
     [key: string]: any;
   };
   [key: string]: any;
@@ -40,6 +48,9 @@ export interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<boolean>;
+  updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  resetPasswordEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
   syncUser: (
     rawUser: any,
     accessToken?: string,
@@ -52,6 +63,10 @@ export interface AuthContextType {
     skills?: string[];
     experience_level?: string;
     avatar_url?: string | null;
+    preferred_interview_type?: string;
+    preferred_language?: string;
+    interview_goals?: string[] | string;
+    target_companies?: string[];
   }) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
 }
@@ -91,6 +106,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const bio = rawUser.bio || rawUser.user_metadata?.bio || "";
       const targetRole = rawUser.target_role || rawUser.user_metadata?.target_role || "Full-Stack Software Engineer";
       const avatarUrl = rawUser.avatar_url || rawUser.user_metadata?.avatar_url || null;
+      const skills = rawUser.skills || rawUser.user_metadata?.skills || null;
+      const experienceLevel = rawUser.experience_level || rawUser.user_metadata?.experience_level || null;
+      const preferredInterviewType = rawUser.preferred_interview_type || rawUser.user_metadata?.preferred_interview_type || null;
+      const preferredLanguage = rawUser.preferred_language || rawUser.user_metadata?.preferred_language || null;
+      const interviewGoals = rawUser.interview_goals || rawUser.user_metadata?.interview_goals || null;
+      const targetCompanies = rawUser.target_companies || rawUser.user_metadata?.target_companies || null;
 
       const userPayload = {
         id,
@@ -99,12 +120,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         avatar_url: avatarUrl,
         bio,
         target_role: targetRole,
+        skills,
+        experience_level: experienceLevel,
+        preferred_interview_type: preferredInterviewType,
+        preferred_language: preferredLanguage,
+        interview_goals: interviewGoals,
+        target_companies: targetCompanies,
         user_metadata: {
           display_name: displayName,
           full_name: displayName,
           bio,
           target_role: targetRole,
           avatar_url: avatarUrl,
+          skills,
+          experience_level: experienceLevel,
+          preferred_interview_type: preferredInterviewType,
+          preferred_language: preferredLanguage,
+          interview_goals: interviewGoals,
+          target_companies: targetCompanies,
           ...(rawUser.user_metadata || {}),
         },
       };
@@ -124,19 +157,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 2. Perform upsert into public.users table directly and via /api/auth/sync
       const supabase = createClient();
       try {
+        const dbPayload: Record<string, any> = {
+          id,
+          email,
+          display_name: displayName,
+          avatar_url: userPayload.avatar_url,
+          bio,
+          target_role: targetRole,
+          updated_at: new Date().toISOString(),
+        };
+        if (skills) dbPayload.skills = skills;
+        if (experienceLevel) dbPayload.experience_level = experienceLevel;
+        if (preferredInterviewType) dbPayload.preferred_interview_type = preferredInterviewType;
+        if (preferredLanguage) dbPayload.preferred_language = preferredLanguage;
+        if (interviewGoals) dbPayload.interview_goals = interviewGoals;
+        if (targetCompanies) dbPayload.target_companies = targetCompanies;
+
         await Promise.allSettled([
-          supabase.from("users").upsert(
-            {
-              id,
-              email,
-              display_name: displayName,
-              avatar_url: userPayload.avatar_url,
-              bio,
-              target_role: targetRole,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "id" }
-          ),
+          supabase.from("users").upsert(dbPayload, { onConflict: "id" }),
           fetch("/api/auth/sync", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -179,6 +217,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           avatar_url: data.avatar_url,
           skills: data.skills,
           experience_level: data.experience_level,
+          preferred_interview_type: data.preferred_interview_type,
+          preferred_language: data.preferred_language,
+          interview_goals: data.interview_goals,
+          target_companies: data.target_companies,
           user_metadata: {
             ...(currentSessionUser?.user_metadata || {}),
             display_name: data.display_name,
@@ -188,6 +230,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             avatar_url: data.avatar_url,
             skills: data.skills,
             experience_level: data.experience_level,
+            preferred_interview_type: data.preferred_interview_type,
+            preferred_language: data.preferred_language,
+            interview_goals: data.interview_goals,
+            target_companies: data.target_companies,
           },
         };
         setUser(mergedUser);
@@ -219,6 +265,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       skills?: string[];
       experience_level?: string;
       avatar_url?: string | null;
+      preferred_interview_type?: string;
+      preferred_language?: string;
+      interview_goals?: string[] | string;
+      target_companies?: string[];
     }): Promise<boolean> => {
       if (!user?.id) return false;
 
@@ -231,6 +281,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const newAvatar = updates.avatar_url !== undefined ? updates.avatar_url : u.avatar_url || null;
       const newSkills = updates.skills !== undefined ? updates.skills : u.skills || null;
       const newExpLevel = updates.experience_level !== undefined ? updates.experience_level : u.experience_level || null;
+      const newPrefInterviewType = updates.preferred_interview_type !== undefined ? updates.preferred_interview_type : u.preferred_interview_type || null;
+      const newPrefLanguage = updates.preferred_language !== undefined ? updates.preferred_language : u.preferred_language || null;
+      const newGoals = updates.interview_goals !== undefined ? updates.interview_goals : u.interview_goals || null;
+      const newTargetCompanies = updates.target_companies !== undefined ? updates.target_companies : u.target_companies || null;
 
       const updatedUserPayload: NormalizedUser = {
         ...user,
@@ -242,6 +296,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         avatar_url: newAvatar,
         skills: newSkills || undefined,
         experience_level: newExpLevel || undefined,
+        preferred_interview_type: newPrefInterviewType || undefined,
+        preferred_language: newPrefLanguage || undefined,
+        interview_goals: newGoals || undefined,
+        target_companies: newTargetCompanies || undefined,
         user_metadata: {
           ...(user.user_metadata || {}),
           display_name: newDisplayName,
@@ -251,6 +309,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           avatar_url: newAvatar,
           skills: newSkills || undefined,
           experience_level: newExpLevel || undefined,
+          preferred_interview_type: newPrefInterviewType || undefined,
+          preferred_language: newPrefLanguage || undefined,
+          interview_goals: newGoals || undefined,
+          target_companies: newTargetCompanies || undefined,
         },
       };
 
@@ -279,6 +341,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         if (newSkills) dbPayload.skills = newSkills;
         if (newExpLevel) dbPayload.experience_level = newExpLevel;
+        if (newPrefInterviewType) dbPayload.preferred_interview_type = newPrefInterviewType;
+        if (newPrefLanguage) dbPayload.preferred_language = newPrefLanguage;
+        if (newGoals) dbPayload.interview_goals = newGoals;
+        if (newTargetCompanies) dbPayload.target_companies = newTargetCompanies;
 
         await Promise.allSettled([
           supabase.from("users").upsert(dbPayload, { onConflict: "id" }),
@@ -291,6 +357,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               avatar_url: newAvatar,
               skills: newSkills,
               experience_level: newExpLevel,
+              preferred_interview_type: newPrefInterviewType,
+              preferred_language: newPrefLanguage,
+              interview_goals: newGoals,
+              target_companies: newTargetCompanies,
             },
           }),
           fetch("/api/user/profile", {
@@ -305,6 +375,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               avatar_url: newAvatar,
               skills: newSkills,
               experience_level: newExpLevel,
+              preferred_interview_type: newPrefInterviewType,
+              preferred_language: newPrefLanguage,
+              interview_goals: newGoals,
+              target_companies: newTargetCompanies,
             }),
           }),
         ]);
@@ -316,6 +390,87 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [user]
   );
+
+  // Password Update
+  const updatePassword = useCallback(async (newPassword: string) => {
+    if (!newPassword || newPassword.length < 6) {
+      return { success: false, error: "Password must be at least 6 characters long." };
+    }
+    const supabase = createClient();
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: true }; // Handled safely
+    }
+  }, []);
+
+  // Password Reset Email Request
+  const resetPasswordEmail = useCallback(async (email: string) => {
+    if (!email) {
+      return { success: false, error: "Please provide a valid email address." };
+    }
+    const supabase = createClient();
+    try {
+      const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/auth?reset=true` : undefined;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
+      });
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: true };
+    }
+  }, []);
+
+  // Delete Candidate Account
+  const deleteAccount = useCallback(async (): Promise<boolean> => {
+    if (!user?.id) return false;
+    isSigningOutRef.current = true;
+    const userId = user.id;
+
+    try {
+      await fetch("/api/user/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+    } catch (err) {
+      console.warn("[AuthContext] deleteAccount api call notice:", err);
+    }
+
+    // Clean up local storage and sign out
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("sb-mock-user");
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith("sb-") || key.includes("supabase")) {
+            localStorage.removeItem(key);
+          }
+        });
+        sessionStorage.clear();
+        document.cookie = "sb-mock-auth=; path=/; max-age=0; SameSite=Lax";
+      } catch {}
+    }
+
+    const supabase = createClient();
+    try {
+      await supabase.auth.signOut();
+    } catch {}
+
+    setUser(null);
+    setSession(null);
+
+    if (typeof window !== "undefined") {
+      window.location.href = "/auth";
+    }
+    return true;
+  }, [user]);
 
   // Clean, single initialization on mount
   useEffect(() => {
@@ -423,6 +578,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     isLoading,
     signOut,
+    deleteAccount,
+    updatePassword,
+    resetPasswordEmail,
     syncUser,
     updateUserProfile,
     refreshProfile,

@@ -24,7 +24,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, display_name, bio, target_role, avatar_url, email, skills, experience_level } = body;
+    const {
+      id,
+      display_name,
+      bio,
+      target_role,
+      avatar_url,
+      email,
+      skills,
+      experience_level,
+      preferred_interview_type,
+      preferred_language,
+      interview_goals,
+      target_companies,
+    } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Missing required user id" }, { status: 400 });
@@ -39,6 +52,10 @@ export async function POST(request: NextRequest) {
       target_role,
       skills,
       experience_level,
+      preferred_interview_type,
+      preferred_language,
+      interview_goals,
+      target_companies,
     });
 
     return NextResponse.json({ success: true, user: updatedUser });
@@ -54,7 +71,19 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, display_name, bio, target_role, avatar_url, skills, experience_level } = body;
+    const {
+      id,
+      display_name,
+      bio,
+      target_role,
+      avatar_url,
+      skills,
+      experience_level,
+      preferred_interview_type,
+      preferred_language,
+      interview_goals,
+      target_companies,
+    } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Missing required user id" }, { status: 400 });
@@ -67,6 +96,10 @@ export async function PATCH(request: NextRequest) {
       avatar_url,
       skills,
       experience_level,
+      preferred_interview_type,
+      preferred_language,
+      interview_goals,
+      target_companies,
     });
 
     return NextResponse.json({ success: true, user: updatedUser });

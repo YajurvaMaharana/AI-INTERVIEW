@@ -27,6 +27,10 @@ export interface User {
   target_role?: string | null;
   skills?: string[] | null;
   experience_level?: string | null;
+  preferred_interview_type?: string | null;
+  preferred_language?: string | null;
+  interview_goals?: string[] | string | null;
+  target_companies?: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -74,6 +78,10 @@ export interface UserInsert {
   target_role?: string | null;
   skills?: string[] | null;
   experience_level?: string | null;
+  preferred_interview_type?: string | null;
+  preferred_language?: string | null;
+  interview_goals?: string[] | string | null;
+  target_companies?: string[] | null;
 }
 
 export interface InterviewSessionInsert {
@@ -110,6 +118,10 @@ export interface UserUpdate {
   target_role?: string | null;
   skills?: string[] | null;
   experience_level?: string | null;
+  preferred_interview_type?: string | null;
+  preferred_language?: string | null;
+  interview_goals?: string[] | string | null;
+  target_companies?: string[] | null;
 }
 
 export interface InterviewSessionUpdate {

@@ -20,6 +20,13 @@ import {
   Image as ImageIcon,
   ShieldCheck,
   CheckCircle2,
+  Lock,
+  Trash2,
+  Target,
+  Terminal,
+  Building2,
+  KeyRound,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -87,17 +94,62 @@ const TECH_SKILLS = [
   "AWS Cloud",
   "GraphQL / REST",
   "Microservices",
+  "Redis & Caching",
+  "CI/CD Pipelines",
+];
+
+const PROGRAMMING_LANGUAGES = [
+  "TypeScript",
+  "Python",
+  "Go",
+  "Java",
+  "C++",
+  "Rust",
+  "JavaScript",
+  "SQL / Postgres",
+];
+
+const INTERVIEW_GOALS = [
+  "FAANG / Tier 1 Tech Company Prep",
+  "Promotion to Senior / Staff Level",
+  "Master Complex System Design",
+  "Polish Behavioral STAR Technique",
+  "Overcome Live Interview Anxiety",
+  "General Interview Practice & Feedback",
+];
+
+const TARGET_COMPANIES = [
+  "Google",
+  "Meta",
+  "Apple",
+  "Amazon",
+  "Netflix",
+  "Stripe",
+  "OpenAI",
+  "Anthropic",
+  "Microsoft",
+  "Databricks",
+  "High-Growth Startup",
 ];
 
 function ProfilePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOnboarding = searchParams?.get("onboarding") === "true";
-  const { user, updateUserProfile, signOut } = useAuth();
+  const {
+    user,
+    updateUserProfile,
+    signOut,
+    updatePassword,
+    resetPasswordEmail,
+    deleteAccount,
+  } = useAuth();
 
   const [displayName, setDisplayName] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [experienceLevel, setExperienceLevel] = useState("senior");
+  const [preferredInterviewType, setPreferredInterviewType] = useState("mixed");
+  const [preferredLanguage, setPreferredLanguage] = useState("TypeScript");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([
@@ -106,7 +158,27 @@ function ProfilePageContent() {
     "System Design",
     "PostgreSQL",
   ]);
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([
+    "FAANG / Tier 1 Tech Company Prep",
+  ]);
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([
+    "Google",
+    "Meta",
+    "Stripe",
+  ]);
   const [isCustomAvatar, setIsCustomAvatar] = useState(false);
+
+  // Security / Password modal state
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordFeedback, setPasswordFeedback] = useState<string | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Delete account modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -143,6 +215,14 @@ function ProfilePageContent() {
           "System Design",
           "PostgreSQL",
         ];
+      const currentPrefType =
+        u.preferred_interview_type ||
+        u.user_metadata?.preferred_interview_type ||
+        "mixed";
+      const currentPrefLang =
+        u.preferred_language ||
+        u.user_metadata?.preferred_language ||
+        "TypeScript";
 
       setDisplayName(currentDisplayName);
       setTargetRole(currentRole);
@@ -150,6 +230,16 @@ function ProfilePageContent() {
       setAvatarUrl(currentAvatar);
       setExperienceLevel(currentExpLevel);
       setSelectedSkills(currentSkills);
+      setPreferredInterviewType(currentPrefType);
+      setPreferredLanguage(currentPrefLang);
+
+      if (u.interview_goals || u.user_metadata?.interview_goals) {
+        const goals = u.interview_goals || u.user_metadata?.interview_goals;
+        setSelectedGoals(Array.isArray(goals) ? goals : [goals]);
+      }
+      if (u.target_companies || u.user_metadata?.target_companies) {
+        setSelectedCompanies(u.target_companies || u.user_metadata?.target_companies);
+      }
     }
   }, [user]);
 
@@ -158,6 +248,22 @@ function ProfilePageContent() {
       setSelectedSkills(selectedSkills.filter((s) => s !== skill));
     } else {
       setSelectedSkills([...selectedSkills, skill]);
+    }
+  };
+
+  const toggleGoal = (goal: string) => {
+    if (selectedGoals.includes(goal)) {
+      setSelectedGoals(selectedGoals.filter((g) => g !== goal));
+    } else {
+      setSelectedGoals([...selectedGoals, goal]);
+    }
+  };
+
+  const toggleCompany = (company: string) => {
+    if (selectedCompanies.includes(company)) {
+      setSelectedCompanies(selectedCompanies.filter((c) => c !== company));
+    } else {
+      setSelectedCompanies([...selectedCompanies, company]);
     }
   };
 
@@ -173,6 +279,10 @@ function ProfilePageContent() {
         avatar_url: avatarUrl.trim() || null,
         skills: selectedSkills,
         experience_level: experienceLevel,
+        preferred_interview_type: preferredInterviewType,
+        preferred_language: preferredLanguage,
+        interview_goals: selectedGoals,
+        target_companies: selectedCompanies,
       });
 
       if (success) {
@@ -196,6 +306,56 @@ function ProfilePageContent() {
     }
   };
 
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordFeedback("Password must be at least 6 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordFeedback("Passwords do not match.");
+      return;
+    }
+
+    setPasswordLoading(true);
+    setPasswordFeedback(null);
+
+    const res = await updatePassword(newPassword);
+    setPasswordLoading(false);
+
+    if (res.success) {
+      setPasswordFeedback("Password updated successfully!");
+      setTimeout(() => {
+        setPasswordModalOpen(false);
+        setNewPassword("");
+        setConfirmPassword("");
+        setPasswordFeedback(null);
+      }, 1200);
+    } else {
+      setPasswordFeedback(res.error || "Failed to update password.");
+    }
+  };
+
+  const handleSendResetEmail = async () => {
+    if (!user?.email) return;
+    setPasswordLoading(true);
+    const res = await resetPasswordEmail(user.email);
+    setPasswordLoading(false);
+    if (res.success) {
+      setPasswordFeedback("Password reset link dispatched to your email!");
+    } else {
+      setPasswordFeedback(res.error || "Failed to send reset link.");
+    }
+  };
+
+  const handleDeleteAccountSubmit = async () => {
+    if (deleteConfirmationInput !== "DELETE") {
+      return;
+    }
+    setIsDeleting(true);
+    await deleteAccount();
+  };
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -207,11 +367,11 @@ function ProfilePageContent() {
   };
 
   return (
-    <div className="min-h-screen pb-16 pt-4 px-3 sm:px-6 lg:px-8">
+    <div className="min-h-screen pb-16 pt-4 px-3 sm:px-6 lg:px-8 bg-[#FDFBF9] dark:bg-[#0B0D13]">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Onboarding Welcome Banner */}
         {isOnboarding && (
-          <div className="p-6 rounded-3xl bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/5 border border-orange-300 dark:border-orange-500/30 shadow-sm animate-in fade-in duration-300">
+          <div className="p-6 rounded-3xl bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/5 border border-orange-300 dark:border-orange-500/30 shadow-xs animate-in fade-in duration-300">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/20 text-orange-700 dark:text-orange-300 text-xs font-bold">
@@ -244,13 +404,13 @@ function ProfilePageContent() {
             <div>
               <div className="inline-flex items-center gap-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider mb-1">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Account & Calibration</span>
+                <span>Candidate Profile & Account Settings</span>
               </div>
               <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                Candidate Profile & Settings
+                Candidate Profile & Calibration
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                Manage your candidate identity, target engineering persona, and interview calibration preferences.
+                Ground the AI interviewer with your competencies, seniority, and target company goals.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2.5">
@@ -265,7 +425,7 @@ function ProfilePageContent() {
               <button
                 type="button"
                 onClick={() => router.push("/interview/new")}
-                className="px-4 py-2 text-xs font-bold rounded-xl bg-orange-600 hover:bg-orange-500 text-white shadow-md transition-all flex items-center gap-1.5"
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-orange-600 hover:bg-orange-500 text-white shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Bot className="w-3.5 h-3.5" />
                 <span>Practice Interview</span>
@@ -497,11 +657,126 @@ function ProfilePageContent() {
             </div>
           </div>
 
-          {/* 4. Tech Stack & Core Competencies */}
+          {/* 4. Preferred Format & Language */}
+          <div className="space-y-3">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <Terminal className="w-4 h-4 text-orange-500" />
+              <span>4. Interview Format & Language Defaults</span>
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Primary Coding Language
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {PROGRAMMING_LANGUAGES.map((lang) => (
+                    <button
+                      key={lang}
+                      type="button"
+                      onClick={() => setPreferredLanguage(lang)}
+                      className={`text-xs px-3 py-1 rounded-lg border transition-all ${
+                        preferredLanguage === lang
+                          ? "bg-orange-600 text-white border-orange-600 font-bold shadow-xs"
+                          : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300"
+                      }`}
+                    >
+                      {lang}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Default Interview Mode
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "technical", label: "Technical Coding" },
+                    { id: "system_design", label: "System Design" },
+                    { id: "behavioral", label: "Behavioral (STAR)" },
+                    { id: "mixed", label: "Full-Loop Adaptive" },
+                  ].map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setPreferredInterviewType(m.id)}
+                      className={`text-xs p-2.5 rounded-xl border text-center font-medium transition-all ${
+                        preferredInterviewType === m.id
+                          ? "bg-orange-500/10 border-orange-500/50 text-orange-700 dark:text-orange-300 font-bold"
+                          : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400"
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Goals & Target Companies */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-orange-500" />
+                <span>Interview Goals</span>
+              </label>
+              <div className="space-y-1.5">
+                {INTERVIEW_GOALS.map((goal) => {
+                  const isSelected = selectedGoals.includes(goal);
+                  return (
+                    <button
+                      key={goal}
+                      type="button"
+                      onClick={() => toggleGoal(goal)}
+                      className={`w-full p-2.5 rounded-xl border text-left text-xs transition-all flex items-center justify-between ${
+                        isSelected
+                          ? "bg-orange-500/10 border-orange-500/40 text-orange-700 dark:text-orange-300 font-semibold"
+                          : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400"
+                      }`}
+                    >
+                      <span>{goal}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-orange-600" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-orange-500" />
+                <span>Target Companies</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {TARGET_COMPANIES.map((company) => {
+                  const isSelected = selectedCompanies.includes(company);
+                  return (
+                    <button
+                      key={company}
+                      type="button"
+                      onClick={() => toggleCompany(company)}
+                      className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
+                        isSelected
+                          ? "bg-orange-600 text-white border-orange-600 font-semibold"
+                          : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400"
+                      }`}
+                    >
+                      {company}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* 6. Tech Stack & Core Competencies */}
           <div className="space-y-3">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
               <Code2 className="w-4 h-4 text-orange-500" />
-              <span>4. Core Tech Stack & Focus Areas</span>
+              <span>6. Core Tech Stack & Focus Areas</span>
             </label>
 
             <div className="flex flex-wrap gap-2">
@@ -514,7 +789,7 @@ function ProfilePageContent() {
                     onClick={() => toggleSkill(skill)}
                     className={`text-xs px-3 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 ${
                       isSelected
-                        ? "bg-orange-500 text-white border-orange-600 font-semibold shadow-xs"
+                        ? "bg-orange-600 text-white border-orange-600 font-semibold shadow-xs"
                         : "bg-slate-50 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-400"
                     }`}
                   >
@@ -526,12 +801,12 @@ function ProfilePageContent() {
             </div>
           </div>
 
-          {/* 5. Bio / Career Summary */}
+          {/* 7. Bio / Career Summary */}
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-orange-500" />
-                <span>5. Candidate Background & Interview Pitch</span>
+                <span>7. Candidate Background & Interview Pitch</span>
               </div>
               <span className="text-[11px] text-slate-400 font-normal">
                 {bio.length}/500 chars
@@ -539,7 +814,7 @@ function ProfilePageContent() {
             </label>
             <textarea
               id="profile-bio-textarea"
-              rows={4}
+              rows={3}
               maxLength={500}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
@@ -556,8 +831,71 @@ function ProfilePageContent() {
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
               Configured for <strong>{targetRole}</strong> (
-              <span className="capitalize">{experienceLevel}</span>). The AI interviewer will calibrate its questioning strategy accordingly: behavioral questions follow the STAR framework with depth on engineering decisions, while technical questions target {selectedSkills.slice(0, 3).join(", ")} failure modes and trade-offs.
+              <span className="capitalize">{experienceLevel}</span>) in <strong>{preferredLanguage}</strong>. The AI interviewer will calibrate its questioning strategy accordingly: behavioral questions follow the STAR framework with depth on engineering decisions, while technical questions target {selectedSkills.slice(0, 3).join(", ")} failure modes and trade-offs.
             </p>
+          </div>
+
+          {/* 8. Account & Security Settings */}
+          <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 space-y-4">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <Lock className="w-4 h-4 text-orange-500" />
+              <span>8. Account Security & Privacy</span>
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#1C2230]/60 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between space-y-3">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-orange-500" />
+                    <span>Password & Authentication</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Update your password directly or request a password reset email to your registered address.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPasswordModalOpen(true);
+                      setPasswordFeedback(null);
+                    }}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-800 dark:text-slate-200 shadow-2xs"
+                  >
+                    Change Password
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendResetEmail}
+                    disabled={passwordLoading}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-xl text-orange-600 dark:text-orange-400 hover:underline"
+                  >
+                    Send Reset Link
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-rose-50/40 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/30 flex flex-col justify-between space-y-3">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Delete Candidate Account</span>
+                  </h4>
+                  <p className="text-[11px] text-rose-600/80 dark:text-rose-400/80 leading-relaxed">
+                    Permanently delete your candidate profile, interview histories, and analytics from Supabase.
+                  </p>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteModalOpen(true)}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-500 text-white shadow-xs"
+                  >
+                    Delete Account
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Bottom Actions */}
@@ -576,7 +914,7 @@ function ProfilePageContent() {
                 type="button"
                 onClick={() => handleSave()}
                 disabled={isSaving}
-                className="flex-1 sm:flex-initial px-5 py-2.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                className="flex-1 sm:flex-initial px-5 py-2.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
               >
                 {isSaving ? "Saving..." : "Save Profile"}
               </button>
@@ -586,7 +924,7 @@ function ProfilePageContent() {
                 type="button"
                 onClick={() => handleSave(isOnboarding ? "/dashboard" : "/interview/new")}
                 disabled={isSaving}
-                className="flex-1 sm:flex-initial px-6 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-500 active:scale-95 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                className="flex-1 sm:flex-initial px-6 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-500 active:scale-95 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 {isSaving ? (
                   <>
@@ -604,6 +942,139 @@ function ProfilePageContent() {
           </div>
         </div>
       </div>
+
+      {/* Password Modal */}
+      {passwordModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#151922] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Change Password
+              </h3>
+              <button
+                onClick={() => setPasswordModalOpen(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {passwordFeedback && (
+              <div
+                className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                  passwordFeedback.includes("success") || passwordFeedback.includes("dispatched")
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-300"
+                    : "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/30 dark:border-rose-900 dark:text-rose-300"
+                }`}
+              >
+                <span>{passwordFeedback}</span>
+              </div>
+            )}
+
+            <form onSubmit={handlePasswordUpdate} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-orange-500/40"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm password"
+                  className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-orange-500/40"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPasswordModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="px-5 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-500 rounded-xl shadow-xs"
+                >
+                  {passwordLoading ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#151922] border border-rose-300 dark:border-rose-900/60 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2">
+                <Trash2 className="w-4 h-4" />
+                <span>Confirm Account Deletion</span>
+              </h3>
+              <button
+                onClick={() => setDeleteModalOpen(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              This action is permanent and cannot be undone. All your mock interview recordings, session transcripts, analytical performance scores, and personalized calibration data will be purged.
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Type <span className="text-rose-600 font-mono">DELETE</span> to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmationInput}
+                onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                placeholder="DELETE"
+                className="w-full px-3.5 py-2 text-xs font-mono bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500/40"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteConfirmationInput !== "DELETE" || isDeleting}
+                onClick={handleDeleteAccountSubmit}
+                className="px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-50 rounded-xl shadow-xs"
+              >
+                {isDeleting ? "Deleting..." : "Permanently Delete Account"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

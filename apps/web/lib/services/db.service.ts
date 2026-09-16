@@ -161,6 +161,10 @@ export async function syncUserToDatabase(
     target_role?: string | null;
     skills?: string[] | null;
     experience_level?: string | null;
+    preferred_interview_type?: string | null;
+    preferred_language?: string | null;
+    interview_goals?: string[] | string | null;
+    target_companies?: string[] | null;
   },
   accessToken?: string
 ): Promise<User | null> {
@@ -179,6 +183,10 @@ export async function syncUserToDatabase(
   const targetRole = user.target_role !== undefined ? user.target_role : (user.user_metadata?.target_role || '');
   const skills = user.skills !== undefined ? user.skills : (user.user_metadata?.skills || null);
   const experienceLevel = user.experience_level !== undefined ? user.experience_level : (user.user_metadata?.experience_level || null);
+  const preferredInterviewType = user.preferred_interview_type !== undefined ? user.preferred_interview_type : (user.user_metadata?.preferred_interview_type || null);
+  const preferredLanguage = user.preferred_language !== undefined ? user.preferred_language : (user.user_metadata?.preferred_language || null);
+  const interviewGoals = user.interview_goals !== undefined ? user.interview_goals : (user.user_metadata?.interview_goals || null);
+  const targetCompanies = user.target_companies !== undefined ? user.target_companies : (user.user_metadata?.target_companies || null);
 
   // If user provided a real access token, use a scoped client so auth.uid() passes RLS
   let scopedClient: SupabaseClient | null = null;
@@ -212,6 +220,10 @@ export async function syncUserToDatabase(
       };
       if (skills !== null) payload.skills = skills;
       if (experienceLevel !== null) payload.experience_level = experienceLevel;
+      if (preferredInterviewType !== null) payload.preferred_interview_type = preferredInterviewType;
+      if (preferredLanguage !== null) payload.preferred_language = preferredLanguage;
+      if (interviewGoals !== null) payload.interview_goals = interviewGoals;
+      if (targetCompanies !== null) payload.target_companies = targetCompanies;
 
       const { data, error } = await client
         .from('users')
@@ -268,6 +280,10 @@ export async function syncUserToDatabase(
     target_role: targetRole || existing?.target_role || '',
     skills: skills || existing?.skills || null,
     experience_level: experienceLevel || existing?.experience_level || null,
+    preferred_interview_type: preferredInterviewType || existing?.preferred_interview_type || null,
+    preferred_language: preferredLanguage || existing?.preferred_language || null,
+    interview_goals: interviewGoals || existing?.interview_goals || null,
+    target_companies: targetCompanies || existing?.target_companies || null,
     created_at: existing?.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -291,6 +307,10 @@ export async function createUser(data: UserInsert): Promise<User> {
           target_role: data.target_role || '',
           skills: data.skills || null,
           experience_level: data.experience_level || null,
+          preferred_interview_type: data.preferred_interview_type || null,
+          preferred_language: data.preferred_language || null,
+          interview_goals: data.interview_goals || null,
+          target_companies: data.target_companies || null,
         })
         .select()
         .single();
@@ -316,6 +336,10 @@ export async function createUser(data: UserInsert): Promise<User> {
     target_role: data.target_role || '',
     skills: data.skills || null,
     experience_level: data.experience_level || null,
+    preferred_interview_type: data.preferred_interview_type || null,
+    preferred_language: data.preferred_language || null,
+    interview_goals: data.interview_goals || null,
+    target_companies: data.target_companies || null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -377,11 +401,47 @@ export async function updateUser(id: string, data: UserUpdate): Promise<User> {
     target_role: data.target_role !== undefined ? data.target_role : (existing?.target_role ?? ''),
     skills: data.skills !== undefined ? data.skills : (existing?.skills ?? null),
     experience_level: data.experience_level !== undefined ? data.experience_level : (existing?.experience_level ?? null),
+    preferred_interview_type: data.preferred_interview_type !== undefined ? data.preferred_interview_type : (existing?.preferred_interview_type ?? null),
+    preferred_language: data.preferred_language !== undefined ? data.preferred_language : (existing?.preferred_language ?? null),
+    interview_goals: data.interview_goals !== undefined ? data.interview_goals : (existing?.interview_goals ?? null),
+    target_companies: data.target_companies !== undefined ? data.target_companies : (existing?.target_companies ?? null),
     created_at: existing?.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
   inMemoryUsers.set(id, updated);
   return updated;
+}
+
+export async function deleteUser(id: string): Promise<boolean> {
+  // 1. Remove from in-memory cache
+  inMemoryUsers.delete(id);
+
+  // Remove associated sessions, messages, and feedback from cache
+  for (const [sessionId, session] of Array.from(inMemorySessions.entries())) {
+    if (session.user_id === id) {
+      inMemorySessions.delete(sessionId);
+      inMemoryMessages.delete(sessionId);
+      inMemoryFeedback.delete(sessionId);
+    }
+  }
+
+  // 2. Remove from Supabase DB
+  const client = getSupabaseAdminClient();
+  if (client) {
+    try {
+      // Delete user sessions (if cascading FK not set)
+      await client.from('interview_sessions').delete().eq('user_id', id);
+      // Delete user record from public.users
+      const { error } = await client.from('users').delete().eq('id', id);
+      if (error) {
+        console.warn('[db.service] Supabase deleteUser error:', error.message);
+      }
+      return true;
+    } catch (err: any) {
+      console.warn('[db.service] deleteUser exception:', err?.message);
+    }
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------------------

@@ -101,6 +101,26 @@ function createMockClient() {
         notifyAuthChange("SIGNED_OUT", null);
         return { error: null };
       },
+      updateUser: async (attributes: { password?: string; data?: Record<string, any> }) => {
+        const current = getStoredMockUser();
+        if (current) {
+          const updated: MockUser = {
+            ...current,
+            user_metadata: {
+              ...current.user_metadata,
+              ...(attributes.data || {}),
+            },
+          };
+          setStoredMockUser(updated);
+          const session = { user: updated, access_token: "mock-token" };
+          notifyAuthChange("USER_UPDATED", session);
+          return { data: { user: updated }, error: null };
+        }
+        return { data: { user: null }, error: null };
+      },
+      resetPasswordForEmail: async (_email: string, _options?: any) => {
+        return { data: {}, error: null };
+      },
       getUser: async () => {
         const user = getStoredMockUser();
         return { data: { user }, error: null };
@@ -432,6 +452,25 @@ export function createClient() {
           return await rawClient.auth.signOut();
         } catch {
           return { error: null };
+        }
+      },
+      updateUser: async (attributes: any) => {
+        try {
+          const res = await rawClient.auth.updateUser(attributes);
+          if (res.data?.user) {
+            setStoredMockUser(res.data.user as any);
+            notifyAuthChange("USER_UPDATED", res.data);
+          }
+          return res;
+        } catch (err: any) {
+          return await mockClient.auth.updateUser(attributes);
+        }
+      },
+      resetPasswordForEmail: async (email: string, options?: any) => {
+        try {
+          return await rawClient.auth.resetPasswordForEmail(email, options);
+        } catch (err: any) {
+          return await mockClient.auth.resetPasswordForEmail(email, options);
         }
       },
     };

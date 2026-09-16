@@ -11,6 +11,10 @@ import {
   Image as ImageIcon,
   AlertCircle,
   Code2,
+  Target,
+  Terminal,
+  Building2,
+  Award,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -63,6 +67,13 @@ const POPULAR_ROLES = [
   "Engineering Manager",
 ];
 
+const EXPERIENCE_LEVELS = [
+  { id: "junior", label: "Junior (0-2 yrs)" },
+  { id: "mid", label: "Mid-Level (2-5 yrs)" },
+  { id: "senior", label: "Senior (5-8 yrs)" },
+  { id: "staff", label: "Staff / Principal (8+ yrs)" },
+];
+
 const AVAILABLE_SKILLS = [
   "TypeScript",
   "React / Next.js",
@@ -74,6 +85,19 @@ const AVAILABLE_SKILLS = [
   "Docker / K8s",
   "AWS Cloud",
   "GraphQL",
+  "Microservices",
+  "Distributed Systems",
+];
+
+const LANGUAGES = [
+  "TypeScript",
+  "Python",
+  "Go",
+  "Java",
+  "C++",
+  "Rust",
+  "JavaScript",
+  "SQL",
 ];
 
 export default function ProfileEditModal({
@@ -85,6 +109,9 @@ export default function ProfileEditModal({
 
   const [displayName, setDisplayName] = useState("");
   const [targetRole, setTargetRole] = useState("");
+  const [experienceLevel, setExperienceLevel] = useState("senior");
+  const [preferredInterviewType, setPreferredInterviewType] = useState("mixed");
+  const [preferredLanguage, setPreferredLanguage] = useState("TypeScript");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([
@@ -124,12 +151,18 @@ export default function ProfileEditModal({
           "React / Next.js",
           "System Design",
         ];
+      const currentExp = u.experience_level || u.user_metadata?.experience_level || "senior";
+      const currentType = u.preferred_interview_type || u.user_metadata?.preferred_interview_type || "mixed";
+      const currentLang = u.preferred_language || u.user_metadata?.preferred_language || "TypeScript";
 
       setDisplayName(currentDisplayName);
       setTargetRole(currentRole);
       setBio(currentBio);
       setAvatarUrl(currentAvatar);
       setSelectedSkills(currentSkills);
+      setExperienceLevel(currentExp);
+      setPreferredInterviewType(currentType);
+      setPreferredLanguage(currentLang);
       setIsSuccess(false);
       setErrorMessage(null);
     }
@@ -157,6 +190,9 @@ export default function ProfileEditModal({
         bio: bio.trim(),
         avatar_url: avatarUrl.trim() || null,
         skills: selectedSkills,
+        experience_level: experienceLevel,
+        preferred_interview_type: preferredInterviewType,
+        preferred_language: preferredLanguage,
       });
 
       if (success) {
@@ -179,7 +215,7 @@ export default function ProfileEditModal({
   return (
     <div
       id="profile-edit-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -278,7 +314,7 @@ export default function ProfileEditModal({
                       />
                       {isSelected && (
                         <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
-                          <Check className="w-4 h-4 text-white drop-shadow" />
+                          <Check className="w-4 h-4 text-white drop-shadow-xs" />
                         </div>
                       )}
                     </button>
@@ -304,36 +340,77 @@ export default function ProfileEditModal({
             />
           </div>
 
-          {/* Target Role */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-              <span>Target Role & Calibration</span>
-              <span className="text-[11px] text-slate-400">Sets difficulty matrix</span>
-            </label>
-            <input
-              type="text"
-              id="modal-target-role-input"
-              required
-              value={targetRole}
-              onChange={(e) => setTargetRole(e.target.value)}
-              placeholder="e.g. Senior Full-Stack Engineer"
-              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-orange-500/40 text-slate-900 dark:text-white"
-            />
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {POPULAR_ROLES.map((role) => (
-                <button
-                  key={role}
-                  type="button"
-                  onClick={() => setTargetRole(role)}
-                  className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-all ${
-                    targetRole === role
-                      ? "bg-orange-500/10 border-orange-500/40 text-orange-600 dark:text-orange-400 font-semibold"
-                      : "bg-slate-100/70 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
-                  }`}
-                >
-                  {role}
-                </button>
-              ))}
+          {/* Target Role & Seniority */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Target Role
+              </label>
+              <input
+                type="text"
+                id="modal-target-role-input"
+                required
+                value={targetRole}
+                onChange={(e) => setTargetRole(e.target.value)}
+                placeholder="e.g. Senior Full-Stack Engineer"
+                className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-orange-500/40 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Experience Level
+              </label>
+              <select
+                id="modal-exp-level-select"
+                value={experienceLevel}
+                onChange={(e) => setExperienceLevel(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-orange-500/40 text-slate-900 dark:text-white"
+              >
+                {EXPERIENCE_LEVELS.map((exp) => (
+                  <option key={exp.id} value={exp.id}>
+                    {exp.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Preferred Language & Format */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Primary Language
+              </label>
+              <select
+                id="modal-pref-lang-select"
+                value={preferredLanguage}
+                onChange={(e) => setPreferredLanguage(e.target.value)}
+                className="w-full px-3.5 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-orange-500/40 text-slate-900 dark:text-white"
+              >
+                {LANGUAGES.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {lang}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Default Interview Mode
+              </label>
+              <select
+                id="modal-pref-type-select"
+                value={preferredInterviewType}
+                onChange={(e) => setPreferredInterviewType(e.target.value)}
+                className="w-full px-3.5 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-orange-500/40 text-slate-900 dark:text-white"
+              >
+                <option value="technical">Technical Coding</option>
+                <option value="system_design">System Design</option>
+                <option value="behavioral">Behavioral (STAR)</option>
+                <option value="mixed">Full-Loop Adaptive</option>
+              </select>
             </div>
           </div>
 
