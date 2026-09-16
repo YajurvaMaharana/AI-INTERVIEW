@@ -13,15 +13,19 @@ import {
   ShieldCheck,
   Award,
   Zap,
+  Mic,
+  MessageSquare,
+  Target,
 } from "lucide-react";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { ChatBubble, type ChatMessage } from "@/components/interview/ChatBubble";
 import { InterviewInput } from "@/components/interview/InterviewInput";
+import { LiveVoiceWorkspace } from "@/components/interview/LiveVoiceWorkspace";
 import { Button } from "@/components/ui/button";
 import { AdaptiveTelemetryHUD } from "@/components/interview/AdaptiveTelemetryHUD";
+import { cn } from "@/lib/utils";
 import type { SessionAdaptiveTelemetry } from "@/lib/services/ai-engine/adaptive-engine.service";
 import type { JobDescriptionParsedData } from "@/lib/types/database.types";
-import { Target } from "lucide-react";
 
 interface InterviewResponse {
   message: string;
@@ -35,6 +39,7 @@ interface SessionData {
   difficulty: string;
   type: string;
   status: string;
+  modality?: string;
   jd_data?: JobDescriptionParsedData | null;
 }
 
@@ -45,6 +50,7 @@ export default function InterviewPage() {
 
   const [session, setSession] = React.useState<SessionData | null>(null);
   const [telemetry, setTelemetry] = React.useState<SessionAdaptiveTelemetry | null>(null);
+  const [isVoiceMode, setIsVoiceMode] = React.useState(false);
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
       id: "initial-greeting",
@@ -75,6 +81,9 @@ export default function InterviewPage() {
           if (isMounted) {
             if (data.session) {
               setSession(data.session);
+              if (data.session.modality === "voice") {
+                setIsVoiceMode(true);
+              }
             }
             if (Array.isArray(data.messages) && data.messages.length > 0) {
               const formattedMsgs: ChatMessage[] = data.messages.map((m: any, i: number) => ({
@@ -228,6 +237,36 @@ export default function InterviewPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Mode switcher in header */}
+          <div className="flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setIsVoiceMode(false)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                !isVoiceMode
+                  ? "bg-white dark:bg-[#181E29] text-slate-900 dark:text-white shadow-2xs"
+                  : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+              )}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Text Mode</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsVoiceMode(true)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                isVoiceMode
+                  ? "bg-gradient-to-r from-[#E8602E] to-[#F17E45] text-white shadow-2xs"
+                  : "text-slate-500 hover:text-orange-600 dark:hover:text-orange-400"
+              )}
+            >
+              <Mic className="h-3.5 w-3.5" />
+              <span>Voice Mode</span>
+            </button>
+          </div>
+
           <div className="hidden items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 md:flex bg-white/80 dark:bg-[#1C2230]/80 px-2.5 py-1 rounded-full border border-slate-200/80 dark:border-slate-700/80">
             <Zap className="h-3.5 w-3.5 text-[#E87A42]" />
             <span>Adaptive Engine Live</span>
@@ -343,13 +382,26 @@ export default function InterviewPage() {
         </div>
       </main>
 
-      {/* ── Fixed Bottom Message Input ── */}
+      {/* ── Fixed Bottom Message Input / Voice Workspace ── */}
       <div className="bg-white/90 dark:bg-[#151922]/90 border-t border-slate-200/80 dark:border-[#222B3A] backdrop-blur-md">
-        <InterviewInput
-          onSend={handleSendMessage}
-          disabled={isLoading}
-          placeholder="Type your answer... (Press Enter to send, Shift+Enter for new line)"
-        />
+        {isVoiceMode ? (
+          <div className="max-w-4xl mx-auto p-3 sm:p-4">
+            <LiveVoiceWorkspace
+              onSendAnswer={handleSendMessage}
+              disabled={isLoading}
+              contextRole={session?.role}
+              onSwitchToTextMode={() => setIsVoiceMode(false)}
+            />
+          </div>
+        ) : (
+          <InterviewInput
+            onSend={handleSendMessage}
+            disabled={isLoading}
+            onToggleVoiceMode={() => setIsVoiceMode(true)}
+            isVoiceMode={isVoiceMode}
+            placeholder="Type your answer... (Press Enter to send, Shift+Enter for new line)"
+          />
+        )}
       </div>
     </div>
   );

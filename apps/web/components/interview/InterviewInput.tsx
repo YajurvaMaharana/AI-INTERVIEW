@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { SendHorizonal, Loader2 } from "lucide-react";
+import { SendHorizonal, Loader2, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,8 @@ export interface InterviewInputProps {
   placeholder?: string;
   className?: string;
   maxHeight?: number;
+  onToggleVoiceMode?: () => void;
+  isVoiceMode?: boolean;
 }
 
 export function InterviewInput({
@@ -19,6 +21,8 @@ export function InterviewInput({
   placeholder = "Type your response here... (Press Enter to send, Shift+Enter for a new line)",
   className,
   maxHeight = 200,
+  onToggleVoiceMode,
+  isVoiceMode = false,
 }: InterviewInputProps) {
   const [text, setText] = React.useState("");
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
@@ -78,6 +82,28 @@ export function InterviewInput({
           }}
           className="relative flex items-end gap-2 rounded-2xl border border-input bg-card p-2 shadow-sm transition-all focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20"
         >
+          {onToggleVoiceMode && (
+            <div className="flex shrink-0 items-center pb-1 pl-1">
+              <Button
+                type="button"
+                id="toggle-voice-mode-trigger"
+                size="icon"
+                variant="ghost"
+                onClick={onToggleVoiceMode}
+                disabled={disabled}
+                title="Switch to Voice Mode (Speech-to-Text)"
+                className={cn(
+                  "h-10 w-10 rounded-xl transition-all",
+                  isVoiceMode
+                    ? "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                    : "text-slate-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-slate-800"
+                )}
+              >
+                <Mic className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
           <textarea
             ref={textareaRef}
             rows={1}
@@ -93,7 +119,7 @@ export function InterviewInput({
             aria-label="Interview response message"
           />
 
-          <div className="flex shrink-0 items-center pb-1 pr-1">
+          <div className="flex shrink-0 items-center pb-1 pr-1 gap-1.5">
             <Button
               type="submit"
               size="icon"
@@ -116,10 +142,24 @@ export function InterviewInput({
         </form>
 
         <div className="mt-1.5 flex items-center justify-between px-2 text-[11px] text-muted-foreground/80">
-          <span>
-            Press <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">Enter ↵</kbd> to send,{" "}
-            <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">Shift + Enter</kbd> for new line
-          </span>
+          <div className="flex items-center gap-2">
+            <span>
+              Press <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">Enter ↵</kbd> to send,{" "}
+              <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">Shift + Enter</kbd> for new line
+            </span>
+            {onToggleVoiceMode && (
+              <>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={onToggleVoiceMode}
+                  className="font-medium text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
+                >
+                  🎙️ Speak answer with voice
+                </button>
+              </>
+            )}
+          </div>
           {disabled && (
             <span className="flex items-center gap-1 font-medium text-primary">
               <Loader2 className="h-3 w-3 animate-spin" /> Thinking...

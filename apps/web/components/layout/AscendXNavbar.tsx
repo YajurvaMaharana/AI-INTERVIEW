@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import AscendXLogo from "@/components/layout/AscendXLogo";
 import { CandidateProfileAvatar } from "@/components/interview/PersonaAvatars";
 import ProfileEditModal from "@/components/profile/ProfileEditModal";
+import VoiceCoachModal from "@/components/interview/VoiceCoachModal";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import {
@@ -49,6 +50,7 @@ export default function AscendXNavbar({
   const [expandAllLabels, setExpandAllLabels] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isVoiceCoachOpen, setIsVoiceCoachOpen] = useState(false);
 
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -88,7 +90,7 @@ export default function AscendXNavbar({
       name: "Voice & Speech Coach",
       href: "#voice-coach",
       icon: AudioLines,
-      action: onOpenVoiceModal,
+      action: onOpenVoiceModal || (() => setIsVoiceCoachOpen(true)),
     },
     {
       name: "Day Simulations",
@@ -447,6 +449,12 @@ export default function AscendXNavbar({
       <ProfileEditModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
+      />
+
+      {/* Voice & Speech Coach Modal */}
+      <VoiceCoachModal
+        isOpen={isVoiceCoachOpen}
+        onClose={() => setIsVoiceCoachOpen(false)}
       />
     </>
   );
