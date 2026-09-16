@@ -18,6 +18,10 @@ import { getSessionById, getUserById } from '../db.service';
 import { buildResumePromptGrounding } from '../resume-parser.service';
 import { buildJDPromptCalibration } from '../jd-parser.service';
 import {
+  generateDeterministicClaimsAudit,
+  buildClaimsPromptGrounding,
+} from '../claims-audit.service';
+import {
   getOrCreateSessionTelemetry,
   evaluateCandidateResponse,
   updateSessionTelemetryWithEvaluation,
@@ -101,6 +105,7 @@ function buildSystemPrompt(
   adaptivePromptContext?: string,
   resumeGrounding?: string,
   jdCalibration?: string,
+  claimsGrounding?: string,
 ): string {
   const template = getSystemPromptTemplate(type);
   const variables: PromptVariables = { role, difficulty };
@@ -112,6 +117,10 @@ function buildSystemPrompt(
 
   if (resumeGrounding) {
     basePrompt = `${basePrompt}\n\n${resumeGrounding}`;
+  }
+
+  if (claimsGrounding) {
+    basePrompt = `${basePrompt}\n\n${claimsGrounding}`;
   }
 
   if (adaptivePromptContext) {
@@ -184,6 +193,7 @@ export async function generateOpeningQuestion(
 ): Promise<string> {
   let resumeGrounding = '';
   let jdCalibration = '';
+  let claimsGrounding = '';
 
   if (jdDataOverride) {
     jdCalibration = buildJDPromptCalibration(jdDataOverride);
@@ -200,6 +210,13 @@ export async function generateOpeningQuestion(
         const user = await getUserById(session.user_id);
         if (user?.resume_data) {
           resumeGrounding = buildResumePromptGrounding(user.resume_data);
+          const claimsAudit = generateDeterministicClaimsAudit(
+            user.resume_data,
+            session?.jd_data || user.saved_jd_data
+          );
+          if (claimsAudit?.audited_claims?.length > 0) {
+            claimsGrounding = buildClaimsPromptGrounding(claimsAudit.audited_claims);
+          }
         }
       }
     } catch {
@@ -208,7 +225,15 @@ export async function generateOpeningQuestion(
   }
 
   try {
-    const systemPrompt = buildSystemPrompt(type, role, difficulty, undefined, resumeGrounding, jdCalibration);
+    const systemPrompt = buildSystemPrompt(
+      type,
+      role,
+      difficulty,
+      undefined,
+      resumeGrounding,
+      jdCalibration,
+      claimsGrounding
+    );
 
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
@@ -245,6 +270,7 @@ export async function generateNextAdaptiveResponse(
   // Look up candidate resume for personalized grounding & JD calibration
   let resumeGrounding = '';
   let jdCalibration = '';
+  let claimsGrounding = '';
 
   if (session.jd_data) {
     jdCalibration = buildJDPromptCalibration(session.jd_data);
@@ -255,6 +281,13 @@ export async function generateNextAdaptiveResponse(
       const user = await getUserById(session.user_id);
       if (user?.resume_data) {
         resumeGrounding = buildResumePromptGrounding(user.resume_data);
+        const claimsAudit = generateDeterministicClaimsAudit(
+          user.resume_data,
+          session.jd_data || user.saved_jd_data
+        );
+        if (claimsAudit?.audited_claims?.length > 0) {
+          claimsGrounding = buildClaimsPromptGrounding(claimsAudit.audited_claims);
+        }
       }
       if (!jdCalibration && user?.saved_jd_data) {
         jdCalibration = buildJDPromptCalibration(user.saved_jd_data);
@@ -284,7 +317,7 @@ export async function generateNextAdaptiveResponse(
     evaluation,
   );
 
-  // 4. Construct Dynamic Prompt with Adaptive Matrix, Branching Instructions, Resume Grounding & JD Calibration
+  // 4. Construct Dynamic Prompt with Adaptive Matrix, Branching Instructions, Resume Grounding, JD Calibration & Audited Claims
   const adaptivePromptContext = buildAdaptivePromptContext(updatedTelemetry);
   const systemPrompt = buildSystemPrompt(
     session.type,
@@ -293,6 +326,7 @@ export async function generateNextAdaptiveResponse(
     adaptivePromptContext,
     resumeGrounding,
     jdCalibration,
+    claimsGrounding
   );
 
   let responseText = '';

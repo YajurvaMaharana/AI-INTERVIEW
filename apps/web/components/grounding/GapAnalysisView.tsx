@@ -38,6 +38,10 @@ import type {
   MissingEvidenceItem,
 } from "@/lib/types/gap-analysis.types";
 import { generateDeterministicGapAnalysis } from "@/lib/services/gap-analysis.service";
+import { ResumeClaimsAuditCard } from "./ResumeClaimsAuditCard";
+import type { ResumeClaimsAuditResult } from "@/lib/types/claims-audit.types";
+import { generateDeterministicClaimsAudit } from "@/lib/services/claims-audit.service";
+import { Scale } from "lucide-react";
 
 interface GapAnalysisViewProps {
   initialResume?: ResumeParsedData | null;
@@ -53,7 +57,7 @@ export default function GapAnalysisView({
 
   // Active filter tab: all | strong | weak | missing
   const [activeFilter, setActiveFilter] = useState<"all" | "strong" | "weak" | "missing">("all");
-  const [activeSubTab, setActiveSubTab] = useState<"matrix" | "resume" | "jd">("matrix");
+  const [activeSubTab, setActiveSubTab] = useState<"matrix" | "claims_audit" | "resume" | "jd">("matrix");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<string>("fullstack");
@@ -66,6 +70,7 @@ export default function GapAnalysisView({
     initialJD || (user as any)?.saved_jd_data || null
   );
   const [analysisResult, setAnalysisResult] = useState<GapAnalysisResult | null>(null);
+  const [claimsAuditResult, setClaimsAuditResult] = useState<ResumeClaimsAuditResult | null>(null);
 
   // Preset scenarios
   const presets: Record<
@@ -303,15 +308,38 @@ export default function GapAnalysisView({
     },
   };
 
-  // Run Gap Analysis
+  // Run Gap Analysis & Claims Audit in parallel
   const runAnalysis = async (resume: ResumeParsedData, jd: JobDescriptionParsedData) => {
     setIsLoading(true);
     try {
+      // 1. Trigger Claims Audit in parallel
+      const claimsPromise = fetch("/api/grounding/claims-audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeData: resume, jdData: jd }),
+      })
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            if (data.audit) {
+              setClaimsAuditResult(data.audit);
+              return;
+            }
+          }
+          setClaimsAuditResult(generateDeterministicClaimsAudit(resume, jd));
+        })
+        .catch(() => {
+          setClaimsAuditResult(generateDeterministicClaimsAudit(resume, jd));
+        });
+
+      // 2. Trigger Gap Analysis
       const res = await fetch("/api/grounding/gap-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resumeData: resume, jdData: jd }),
       });
+
+      await claimsPromise;
 
       if (res.ok) {
         const data = await res.json();
@@ -328,6 +356,7 @@ export default function GapAnalysisView({
       console.warn("[GapAnalysisView] Fallback to deterministic analysis:", err);
       const fallback = generateDeterministicGapAnalysis(resume, jd);
       setAnalysisResult(fallback);
+      setClaimsAuditResult(generateDeterministicClaimsAudit(resume, jd));
     } finally {
       setIsLoading(false);
     }
@@ -505,7 +534,7 @@ export default function GapAnalysisView({
             </div>
 
             {/* Breakdown Pill Counts */}
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
               <div className="text-center p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-500/20">
                 <span className="block text-base font-extrabold text-emerald-600 dark:text-emerald-400">
                   {strongMatches.length}
@@ -530,6 +559,19 @@ export default function GapAnalysisView({
                   Missing
                 </span>
               </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubTab("claims_audit")}
+                className="text-center p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 border border-indigo-500/20 transition-all cursor-pointer"
+                title="View audited metrics and resume claims"
+              >
+                <span className="block text-base font-extrabold text-indigo-600 dark:text-indigo-400">
+                  {claimsAuditResult?.audited_claims?.length || 0}
+                </span>
+                <span className="text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
+                  Claims
+                </span>
+              </button>
             </div>
           </div>
 
@@ -641,12 +683,12 @@ export default function GapAnalysisView({
           </button>
         </div>
 
-        {/* View Switcher: Matrix vs Full Raw Content */}
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#1C2230] p-1 rounded-xl self-end sm:self-auto">
+        {/* View Switcher: Matrix vs Claims Audit vs Full Raw Content */}
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#1C2230] p-1 rounded-xl self-end sm:self-auto overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveSubTab("matrix")}
-            className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
               activeSubTab === "matrix"
                 ? "bg-white dark:bg-[#283144] text-slate-900 dark:text-white shadow-2xs font-semibold"
                 : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
@@ -656,8 +698,27 @@ export default function GapAnalysisView({
           </button>
           <button
             type="button"
+            onClick={() => setActiveSubTab("claims_audit")}
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+              activeSubTab === "claims_audit"
+                ? "bg-indigo-600 text-white shadow-2xs font-semibold"
+                : "text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 font-medium"
+            }`}
+          >
+            <Scale className="w-3 h-3" />
+            <span>Claims Audit</span>
+            {claimsAuditResult?.audited_claims?.length ? (
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                activeSubTab === "claims_audit" ? "bg-white text-indigo-700" : "bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300"
+              }`}>
+                {claimsAuditResult.audited_claims.length}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveSubTab("resume")}
-            className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
               activeSubTab === "resume"
                 ? "bg-white dark:bg-[#283144] text-slate-900 dark:text-white shadow-2xs font-semibold"
                 : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
@@ -668,7 +729,7 @@ export default function GapAnalysisView({
           <button
             type="button"
             onClick={() => setActiveSubTab("jd")}
-            className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
               activeSubTab === "jd"
                 ? "bg-white dark:bg-[#283144] text-slate-900 dark:text-white shadow-2xs font-semibold"
                 : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
@@ -682,6 +743,42 @@ export default function GapAnalysisView({
       {/* ── Tab 1: Detailed Gap Analysis Cards ── */}
       {activeSubTab === "matrix" && (
         <div className="space-y-4">
+          {/* Resume Claims & Metrics Audit Quick-Access Banner */}
+          {claimsAuditResult && (
+            <div className="bg-gradient-to-r from-indigo-50/80 via-white to-blue-50/50 dark:from-[#1E1F38] dark:via-[#161828] dark:to-[#181B30] border border-indigo-200/80 dark:border-indigo-900/40 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                  <Scale className="w-4 h-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                      Grounding Intelligence Engine
+                    </span>
+                    <span className="px-2 py-0.2 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-300 text-[10px] font-bold">
+                      {claimsAuditResult.audited_claims?.length || 0} Claims Extracted
+                    </span>
+                  </div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                    Resume Metrics & Architectural Claims Audited
+                  </h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-1 max-w-2xl">
+                    {claimsAuditResult.high_impact_probes_summary || "Specific latency numbers, throughput metrics, and ownership claims will be cross-examined during your mock interview."}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveSubTab("claims_audit")}
+                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shrink-0 flex items-center justify-center gap-1.5 shadow-xs cursor-pointer self-start sm:self-auto"
+              >
+                <span>View Claims Audit</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* 1. STRONG MATCHES SECTION */}
           {(activeFilter === "all" || activeFilter === "strong") && strongMatches.length > 0 && (
             <div className="space-y-3">
@@ -885,6 +982,18 @@ export default function GapAnalysisView({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Tab: Resume Claims & Metrics Audit ── */}
+      {activeSubTab === "claims_audit" && (
+        <div className="space-y-4">
+          <ResumeClaimsAuditCard
+            claims={claimsAuditResult?.audited_claims || []}
+            highImpactSummary={claimsAuditResult?.high_impact_probes_summary}
+            candidateHeadline={claimsAuditResult?.candidate_headline || currentResume?.headline}
+            onLaunchCalibratedInterview={handleLaunchGroundedInterview}
+          />
         </div>
       )}
 
