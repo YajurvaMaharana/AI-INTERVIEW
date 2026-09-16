@@ -44,8 +44,7 @@ export default function AscendXNavbar({
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  // Navigation state
-  const [activeTab, setActiveTab] = useState("Dashboard");
+  // State for mobile drawer, expandable labels, profile menu and modal
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandAllLabels, setExpandAllLabels] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -94,18 +93,21 @@ export default function AscendXNavbar({
     },
     {
       name: "Day Simulations",
-      href: "/interview/new",
+      href: "/interview/simulation",
       icon: Laptop,
+      action: () => router.push("/interview/new?mode=simulation"),
     },
     {
       name: "Insights & Trends",
-      href: "/dashboard",
+      href: "/dashboard/insights",
       icon: TrendingUp,
+      action: () => router.push("/dashboard?view=insights"),
     },
     {
       name: "Feedback Hub",
-      href: "/dashboard",
+      href: "/dashboard/feedback",
       icon: Sparkles,
+      action: () => router.push("/dashboard?view=feedback"),
     },
   ];
 
@@ -140,18 +142,13 @@ export default function AscendXNavbar({
             <nav className="hidden xl:flex items-center gap-1 2xl:gap-1.5 bg-slate-100/70 dark:bg-[#1C2230]/70 p-1 rounded-full border border-slate-200/60 dark:border-slate-800">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive =
-                  activeTab === item.name ||
-                  (item.href === "/dashboard" &&
-                    pathname === "/dashboard" &&
-                    activeTab === "Dashboard");
+                const isActive = pathname === item.href;
 
                 return (
                   <button
                     key={item.name}
                     type="button"
                     onClick={() => {
-                      setActiveTab(item.name);
                       if (item.action) {
                         item.action();
                       } else if (item.href) {
@@ -160,7 +157,7 @@ export default function AscendXNavbar({
                     }}
                     className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ease-out cursor-pointer select-none ${
                       isActive
-                        ? "bg-black dark:bg-[#E8602E] text-white font-semibold shadow-xs"
+                        ? "bg-[#E8602E] text-white font-semibold shadow-xs"
                         : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-[#283144]"
                     }`}
                     title={item.name}
@@ -169,7 +166,7 @@ export default function AscendXNavbar({
                     <Icon
                       className={`w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110 ${
                         isActive
-                          ? "text-amber-300 dark:text-white"
+                          ? "text-white"
                           : "text-slate-500 dark:text-slate-400 group-hover:text-[#E87A42]"
                       }`}
                     />
@@ -357,14 +354,13 @@ export default function AscendXNavbar({
 
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = activeTab === item.name;
+                const isActive = pathname === item.href;
 
                 return (
                   <button
                     key={item.name}
                     type="button"
                     onClick={() => {
-                      setActiveTab(item.name);
                       setIsMobileMenuOpen(false);
                       if (item.action) {
                         item.action();
@@ -374,12 +370,12 @@ export default function AscendXNavbar({
                     }}
                     className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-colors ${
                       isActive
-                        ? "bg-black dark:bg-[#E8602E] text-white font-semibold"
+                        ? "bg-[#E8602E] text-white font-semibold"
                         : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <Icon className="w-4 h-4 text-[#E87A42]" />
+                      <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-[#E87A42]"}`} />
                       <span>{item.name}</span>
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 opacity-60" />
