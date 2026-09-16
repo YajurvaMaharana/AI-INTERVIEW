@@ -133,11 +133,23 @@ function ProfilePageContent() {
         "Software Engineer passionate about high-concurrency distributed systems, clean architecture, and technical problem solving.";
       const currentAvatar =
         u.avatar_url || u.user_metadata?.avatar_url || AVATAR_PRESETS[0].url;
+      const currentExpLevel =
+        u.experience_level || u.user_metadata?.experience_level || "senior";
+      const currentSkills =
+        u.skills ||
+        u.user_metadata?.skills || [
+          "TypeScript",
+          "React / Next.js",
+          "System Design",
+          "PostgreSQL",
+        ];
 
       setDisplayName(currentDisplayName);
       setTargetRole(currentRole);
       setBio(currentBio);
       setAvatarUrl(currentAvatar);
+      setExperienceLevel(currentExpLevel);
+      setSelectedSkills(currentSkills);
     }
   }, [user]);
 
@@ -159,6 +171,8 @@ function ProfilePageContent() {
         target_role: targetRole.trim() || "Software Engineer",
         bio: bio.trim(),
         avatar_url: avatarUrl.trim() || null,
+        skills: selectedSkills,
+        experience_level: experienceLevel,
       });
 
       if (success) {

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, display_name, bio, target_role, avatar_url, email } = body;
+    const { id, display_name, bio, target_role, avatar_url, email, skills, experience_level } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Missing required user id" }, { status: 400 });
@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
       avatar_url,
       bio,
       target_role,
+      skills,
+      experience_level,
     });
 
     return NextResponse.json({ success: true, user: updatedUser });
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, display_name, bio, target_role, avatar_url } = body;
+    const { id, display_name, bio, target_role, avatar_url, skills, experience_level } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Missing required user id" }, { status: 400 });
@@ -63,6 +65,8 @@ export async function PATCH(request: NextRequest) {
       bio,
       target_role,
       avatar_url,
+      skills,
+      experience_level,
     });
 
     return NextResponse.json({ success: true, user: updatedUser });

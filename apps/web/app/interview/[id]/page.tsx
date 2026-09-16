@@ -12,14 +12,19 @@ import {
   Clock,
   ShieldCheck,
   Award,
+  Zap,
 } from "lucide-react";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { ChatBubble, type ChatMessage } from "@/components/interview/ChatBubble";
 import { InterviewInput } from "@/components/interview/InterviewInput";
 import { Button } from "@/components/ui/button";
+import { AdaptiveTelemetryHUD } from "@/components/interview/AdaptiveTelemetryHUD";
+import type { SessionAdaptiveTelemetry } from "@/lib/services/ai-engine/adaptive-engine.service";
 
 interface InterviewResponse {
   message: string;
+  telemetry?: SessionAdaptiveTelemetry;
+  evaluation?: any;
 }
 
 interface SessionData {
@@ -36,6 +41,7 @@ export default function InterviewPage() {
   const interviewId = (params?.id as string) || "demo-session";
 
   const [session, setSession] = React.useState<SessionData | null>(null);
+  const [telemetry, setTelemetry] = React.useState<SessionAdaptiveTelemetry | null>(null);
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
       id: "initial-greeting",
@@ -50,14 +56,19 @@ export default function InterviewPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [lastFailedMessage, setLastFailedMessage] = React.useState<string | null>(null);
 
-  // Load existing session and messages from Supabase via API route
+  // Load existing session, messages, and initial telemetry
   React.useEffect(() => {
     let isMounted = true;
+
     async function loadSessionData() {
       try {
-        const res = await fetch(`/api/interviews/${encodeURIComponent(interviewId)}`);
-        if (res.ok) {
-          const data = await res.json();
+        const [sessionRes, telemetryRes] = await Promise.all([
+          fetch(`/api/interviews/${encodeURIComponent(interviewId)}`),
+          fetch(`/api/interviews/${encodeURIComponent(interviewId)}/telemetry`),
+        ]);
+
+        if (sessionRes.ok) {
+          const data = await sessionRes.json();
           if (isMounted) {
             if (data.session) {
               setSession(data.session);
@@ -73,10 +84,18 @@ export default function InterviewPage() {
             }
           }
         }
+
+        if (telemetryRes.ok) {
+          const teleData = await telemetryRes.json();
+          if (isMounted && teleData.telemetry) {
+            setTelemetry(teleData.telemetry);
+          }
+        }
       } catch (err) {
-        console.warn("Could not preload session messages:", err);
+        console.warn("Could not preload session messages or telemetry:", err);
       }
     }
+
     loadSessionData();
     return () => {
       isMounted = false;
@@ -132,6 +151,10 @@ export default function InterviewPage() {
 
       const data: InterviewResponse = await response.json();
 
+      if (data.telemetry) {
+        setTelemetry(data.telemetry);
+      }
+
       const aiReply: ChatMessage = {
         id: `ai-${Date.now()}`,
         role: "assistant",
@@ -165,36 +188,36 @@ export default function InterviewPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
+    <div className="flex h-[calc(100vh-4rem)] flex-col bg-[#ECEEF2] dark:bg-[#0B0F15] transition-colors duration-300">
       {/* ── Top Session Header ── */}
-      <header className="flex shrink-0 items-center justify-between border-b border-border/70 bg-card/60 px-4 py-3 backdrop-blur-md sm:px-6">
+      <header className="flex shrink-0 items-center justify-between border-b border-slate-200/80 dark:border-[#222B3A] bg-white/80 dark:bg-[#151922]/80 px-4 py-3 backdrop-blur-md sm:px-6">
         <div className="flex items-center gap-3">
           <Button
             asChild
             variant="ghost"
             size="sm"
-            className="gap-1.5 text-muted-foreground hover:text-foreground"
+            className="gap-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
           >
             <Link href="/dashboard">
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Dashboard</span>
             </Link>
           </Button>
-          <div className="h-4 w-px bg-border/80" />
+          <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[#E8602E] to-[#F17E45] text-white shadow-2xs">
               <Bot className="h-4 w-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-sm font-semibold sm:text-base">
-                  {session?.role ? `${session.role} Interview` : "Live Mock Interview"}
+                <h1 className="text-sm font-bold sm:text-base text-slate-900 dark:text-white">
+                  {session?.role ? `${session.role} Interview` : "Adaptive AI Mock Interview"}
                 </h1>
-                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                  {session?.difficulty ? `${session.difficulty.toUpperCase()}` : "Active"}
+                <span className="inline-flex items-center rounded-full bg-[#FFF7ED] dark:bg-[#2A1D17] border border-[#FDBA74]/80 dark:border-[#EA580C]/40 px-2.5 py-0.5 text-[10px] font-bold text-[#C2410C] dark:text-[#FB923C]">
+                  {session?.difficulty ? `${session.difficulty.toUpperCase()}` : "ADAPTIVE"}
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Session ID: <span className="font-mono">{interviewId}</span>
               </p>
             </div>
@@ -202,34 +225,39 @@ export default function InterviewPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-            <span>AI Guided</span>
+          <div className="hidden items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 md:flex bg-white/80 dark:bg-[#1C2230]/80 px-2.5 py-1 rounded-full border border-slate-200/80 dark:border-slate-700/80">
+            <Zap className="h-3.5 w-3.5 text-[#E87A42]" />
+            <span>Adaptive Engine Live</span>
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={handleEndSession}
-            className="gap-1.5 text-xs text-foreground hover:bg-primary/10"
+            className="gap-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-[#181E29] border-slate-200 dark:border-slate-800 hover:bg-[#FFF6F0] dark:hover:bg-[#2A1D17] hover:text-[#E8602E] transition-colors cursor-pointer shadow-2xs"
           >
-            <Award className="h-3.5 w-3.5 text-primary" />
+            <Award className="h-3.5 w-3.5 text-[#E8602E]" />
             <span>End & View Feedback</span>
           </Button>
         </div>
       </header>
 
+      {/* ── Real-Time Adaptive Difficulty & Telemetry HUD ── */}
+      <div className="px-4 sm:px-6 md:px-8 pt-3 pb-1 max-w-4xl mx-auto w-full">
+        <AdaptiveTelemetryHUD telemetry={telemetry} />
+      </div>
+
       {/* ── Scrollable Chat Messages Area ── */}
       <main
         ref={containerRef}
-        className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 md:px-8"
+        className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 md:px-8"
         aria-label="Interview Conversation"
       >
         <div className="mx-auto max-w-4xl space-y-4">
           {/* Session Banner */}
-          <div className="rounded-xl border border-border/60 bg-muted/40 p-3 text-center text-xs text-muted-foreground">
+          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-[#151922]/80 p-3 text-center text-xs text-slate-600 dark:text-slate-400 shadow-2xs">
             <p className="flex items-center justify-center gap-1.5 font-medium">
-              <Clock className="h-3.5 w-3.5 text-primary" />
-              Practice mode is active. Answer thoughtfully using the STAR method for behavioral topics or describing trade-offs for technical problems.
+              <Clock className="h-3.5 w-3.5 text-[#E8602E]" />
+              Real-time adaptive difficulty is active. Answers are scored live across concurrency, system design, and STAR framework dimensions.
             </p>
           </div>
 
@@ -241,27 +269,27 @@ export default function InterviewPage() {
             />
           ))}
 
-          {/* AI Typing Indicator */}
+          {/* AI Typing Indicator with Adaptive Evaluation Note */}
           {isLoading && (
             <div className="flex w-full items-start gap-3 py-2">
               <div
                 aria-hidden="true"
-                className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full border border-primary/25 bg-primary/10 text-primary shadow-xs"
+                className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-2xl bg-gradient-to-tr from-[#E8602E] to-[#F17E45] text-white shadow-xs"
               >
                 <Bot className="h-5 w-5" />
               </div>
               <div className="flex flex-col space-y-1">
-                <div className="flex items-center gap-1 px-1 text-xs text-muted-foreground">
-                  <Sparkles className="h-3 w-3 text-primary" />
-                  <span className="font-semibold text-foreground/90">
-                    AscendX Interviewer
+                <div className="flex items-center gap-1 px-1 text-xs text-slate-500 dark:text-slate-400">
+                  <Sparkles className="h-3 w-3 text-[#E8602E]" />
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    AscendX Adaptive Engine
                   </span>
-                  <span className="text-[11px] text-muted-foreground">is evaluating and formulating response...</span>
+                  <span className="text-[11px] text-slate-500">evaluating competency matrix & branching...</span>
                 </div>
-                <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-xs border border-border/80 bg-card px-4 py-3.5 shadow-xs">
-                  <span className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
-                  <span className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
-                  <span className="h-2 w-2 rounded-full bg-primary animate-bounce" />
+                <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-xs border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#181E29] px-4 py-3.5 shadow-2xs">
+                  <span className="h-2 w-2 rounded-full bg-[#E8602E] animate-bounce [animation-delay:-0.3s]" />
+                  <span className="h-2 w-2 rounded-full bg-[#E8602E] animate-bounce [animation-delay:-0.15s]" />
+                  <span className="h-2 w-2 rounded-full bg-[#E8602E] animate-bounce" />
                 </div>
               </div>
             </div>
@@ -269,7 +297,7 @@ export default function InterviewPage() {
 
           {/* Inline Error Message */}
           {error && (
-            <div className="flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/10 p-3.5 text-sm text-destructive shadow-xs">
+            <div className="flex items-center justify-between rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-sm text-rose-600 dark:text-rose-400 shadow-2xs">
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span className="font-medium">{error}</span>
@@ -281,7 +309,7 @@ export default function InterviewPage() {
                   size="sm"
                   onClick={handleRetry}
                   disabled={isLoading}
-                  className="shrink-0 gap-1.5 border-destructive/40 text-xs text-destructive hover:bg-destructive/15"
+                  className="shrink-0 gap-1.5 border-rose-500/40 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-500/15"
                 >
                   <RefreshCw className="h-3 w-3" />
                   Retry
@@ -296,11 +324,13 @@ export default function InterviewPage() {
       </main>
 
       {/* ── Fixed Bottom Message Input ── */}
-      <InterviewInput
-        onSend={handleSendMessage}
-        disabled={isLoading}
-        placeholder="Type your answer... (Press Enter to send, Shift+Enter for new line)"
-      />
+      <div className="bg-white/90 dark:bg-[#151922]/90 border-t border-slate-200/80 dark:border-[#222B3A] backdrop-blur-md">
+        <InterviewInput
+          onSend={handleSendMessage}
+          disabled={isLoading}
+          placeholder="Type your answer... (Press Enter to send, Shift+Enter for new line)"
+        />
+      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { emailToUUID, isValidUUID } from "@/lib/supabase/env";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import AscendXLogo from "@/components/layout/AscendXLogo";
 import {
   Mountain,
   Mail,
@@ -530,11 +531,8 @@ export default function SlidingAuth({ initialMode }: SlidingAuthProps) {
         {/* ========================================================= */}
         <div className="md:hidden flex flex-col border-b bg-muted/30 p-4">
           <div className="flex items-center justify-between pb-3">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Mountain className="h-4 w-4" />
-              </div>
-              <span className="font-extrabold text-lg tracking-tight">AscendX</span>
+            <Link href="/" className="flex items-center">
+              <AscendXLogo size="sm" />
             </Link>
             <span className="text-xs font-medium text-muted-foreground">
               Mock Interview Studio
@@ -1087,13 +1085,8 @@ export default function SlidingAuth({ initialMode }: SlidingAuthProps) {
             </svg>
 
             {/* Top Brand Header inside Mountain Panel */}
-            <div className="relative z-10 flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/20 backdrop-blur-md border border-primary/40 text-primary-foreground">
-                <Mountain className="h-5 w-5 text-sky-400" />
-              </div>
-              <span className="text-xl font-extrabold tracking-tight text-white drop-shadow-sm">
-                AscendX
-              </span>
+            <div className="relative z-10 flex items-center">
+              <AscendXLogo size="md" />
             </div>
 
             {/* Dynamic Center/Overlay Content */}

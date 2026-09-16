@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionById, createMessage, getMessagesBySessionId } from '@/lib/services/db.service';
-import { generateNextResponse } from '@/lib/services/ai-engine/interviewer';
+import { generateNextAdaptiveResponse } from '@/lib/services/ai-engine/interviewer';
+import { getOrCreateSessionTelemetry } from '@/lib/services/ai-engine/adaptive-engine.service';
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -35,27 +36,49 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       sequence_order: nextOrder,
     });
 
-    let aiResponse = '';
+    let aiResult;
     try {
-      aiResponse = await generateNextResponse(sessionId, message.trim());
+      aiResult = await generateNextAdaptiveResponse(sessionId, message.trim());
     } catch (aiErr: any) {
       console.warn('[api/interviews/message] AI generation fallback:', aiErr?.message);
-      if (session.type === 'behavioral') {
-        aiResponse = `Thank you for walking me through that situation. You highlighted the actions well. To dig a little deeper into the Result aspect of the STAR method, what were the quantifiable metrics or long-term impacts of the decisions you made?`;
-      } else {
-        aiResponse = `That's a sound initial approach. Now, let's explore optimization and edge cases. If the incoming traffic or data volume were to increase by a factor of 100x, where would the primary bottleneck emerge in this design, and how would you mitigate it?`;
-      }
+      const currentTelemetry = getOrCreateSessionTelemetry(sessionId, session.type, session.difficulty);
+      const defaultText =
+        session.type === 'behavioral'
+          ? `Thank you for walking me through that situation. Focusing on the measurable outcome: what were the quantifiable metrics or long-term impacts of the decisions you made?`
+          : `That's a sound initial approach. Now, looking at optimization: if the concurrent traffic increases by 50x, where would the primary bottleneck emerge in this design, and how would you mitigate it?`;
+      
+      aiResult = {
+        message: defaultText,
+        telemetry: currentTelemetry,
+        evaluation: {
+          score: 75,
+          topic: currentTelemetry.currentTopic,
+          strengths: ['Initial answer provided'],
+          weaknesses: ['Scale and edge cases need exploration'],
+          branchDecision: 'PROBE_DEEPER' as const,
+          suggestedFocusArea: 'High scale optimization',
+          difficultyAdjustment: 0.05,
+          feedbackNote: 'Targeting edge cases',
+        },
+      };
     }
 
     // Save AI interviewer's reply to Supabase
     await createMessage({
       session_id: sessionId,
       sender_role: 'ai',
-      content: aiResponse,
+      content: aiResult.message,
       sequence_order: nextOrder + 1,
     });
 
-    return NextResponse.json({ message: aiResponse }, { status: 200 });
+    return NextResponse.json(
+      {
+        message: aiResult.message,
+        telemetry: aiResult.telemetry,
+        evaluation: aiResult.evaluation,
+      },
+      { status: 200 }
+    );
   } catch (err: any) {
     console.error('[api/interviews/message] Error processing message:', err);
     return NextResponse.json(

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // interviewer.ts — AI interviewer service: prompt selection, LLM calls,
-//                  and typed error handling
+//                  real-time adaptive difficulty & branching engine
 // ---------------------------------------------------------------------------
 
 import { GoogleGenAI } from '@google/genai';
@@ -14,6 +14,14 @@ import {
 import type { ChatMessage, PromptVariables } from './context.service';
 import type { InterviewType, Difficulty } from '../../types/database.types';
 import { getSessionById } from '../db.service';
+import {
+  getOrCreateSessionTelemetry,
+  evaluateCandidateResponse,
+  updateSessionTelemetryWithEvaluation,
+  buildAdaptivePromptContext,
+  type SessionAdaptiveTelemetry,
+  type CandidateEvaluationResult,
+} from './adaptive-engine.service';
 
 // ---------------------------------------------------------------------------
 // Typed errors
@@ -87,10 +95,16 @@ function buildSystemPrompt(
   type: InterviewType,
   role: string,
   difficulty: string,
+  adaptivePromptContext?: string,
 ): string {
   const template = getSystemPromptTemplate(type);
   const variables: PromptVariables = { role, difficulty };
-  return injectPromptVariables(template, variables);
+  const basePrompt = injectPromptVariables(template, variables);
+
+  if (adaptivePromptContext) {
+    return `${basePrompt}\n\n${adaptivePromptContext}`;
+  }
+  return basePrompt;
 }
 
 async function callGeminiAPI(messages: ChatMessage[]): Promise<string> {
@@ -113,7 +127,7 @@ async function callGeminiAPI(messages: ChatMessage[]): Promise<string> {
       contents,
       config: {
         systemInstruction: systemMessage?.content,
-      }
+      },
     });
 
     const text = result.text;
@@ -145,43 +159,122 @@ export async function generateOpeningQuestion(
   type: InterviewType,
   role: string,
   difficulty: Difficulty,
+  sessionId?: string,
 ): Promise<string> {
-  const systemPrompt = buildSystemPrompt(type, role, difficulty);
+  if (sessionId) {
+    getOrCreateSessionTelemetry(sessionId, type, difficulty);
+  }
 
-  const messages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt },
-  ];
+  try {
+    const systemPrompt = buildSystemPrompt(type, role, difficulty);
 
-  return callGeminiAPI(messages);
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
+    ];
+
+    return await callGeminiAPI(messages);
+  } catch (err: any) {
+    console.warn('[interviewer] Fallback for opening question:', err?.message);
+    if (type.toLowerCase() === 'technical') {
+      return `Welcome to your technical mock interview for the ${role} position (${difficulty} level). To kick off, could you briefly introduce yourself, explain a complex technical challenge you solved recently, and walk me through the key architectural trade-offs you made?`;
+    } else {
+      return `Hello and welcome! I am your interviewer for the ${role} position. Let's begin with a behavioral question using the STAR framework: Can you describe a challenging project or cross-functional disagreement you navigated in your recent work, and what specific actions you took to deliver results?`;
+    }
+  }
 }
 
-export async function generateNextResponse(
+export interface AdaptiveResponseResult {
+  message: string;
+  telemetry: SessionAdaptiveTelemetry;
+  evaluation: CandidateEvaluationResult;
+}
+
+export async function generateNextAdaptiveResponse(
   sessionId: string,
   userMessage: string,
-): Promise<string> {
+): Promise<AdaptiveResponseResult> {
   const session = await getSessionById(sessionId);
 
   if (!session) {
     throw new Error(`Session "${sessionId}" not found`);
   }
 
-  const systemPrompt = buildSystemPrompt(
+  // 1. Retrieve current session telemetry
+  const currentTelemetry = getOrCreateSessionTelemetry(
+    sessionId,
     session.type,
-    session.role,
     session.difficulty,
   );
 
-  const history = await buildMessageHistory(sessionId);
+  // 2. Perform Real-Time Scoring & Branching Evaluation
+  const evaluation = evaluateCandidateResponse(
+    userMessage,
+    currentTelemetry.currentTopic,
+    session.type,
+  );
 
-  const fullContext: ChatMessage[] = [
-    { role: 'system', content: systemPrompt },
-    ...history,
-    { role: 'user', content: userMessage },
-  ];
+  // 3. Update Running Session Telemetry with Evaluation
+  const updatedTelemetry = updateSessionTelemetryWithEvaluation(
+    sessionId,
+    evaluation,
+  );
 
-  const truncated = truncateContext(fullContext, {
-    maxMessages: MAX_CONTEXT_MESSAGES,
-  });
+  // 4. Construct Dynamic Prompt with Adaptive Matrix & Branching Instructions
+  const adaptivePromptContext = buildAdaptivePromptContext(updatedTelemetry);
+  const systemPrompt = buildSystemPrompt(
+    session.type,
+    session.role,
+    updatedTelemetry.currentDifficultyTier,
+    adaptivePromptContext,
+  );
 
-  return callGeminiAPI(truncated);
+  let responseText = '';
+
+  try {
+    const history = await buildMessageHistory(sessionId);
+
+    const fullContext: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
+      ...history,
+      { role: 'user', content: userMessage },
+    ];
+
+    const truncated = truncateContext(fullContext, {
+      maxMessages: MAX_CONTEXT_MESSAGES,
+    });
+
+    responseText = await callGeminiAPI(truncated);
+  } catch (err: any) {
+    console.warn('[interviewer] Fallback for adaptive next response:', err?.message);
+
+    if (session.type.toLowerCase() === 'technical') {
+      if (evaluation.branchDecision === 'LEVEL_UP') {
+        responseText = `Excellent explanation of ${userMessage.slice(0, 35)}... Let's scale this up to a hard constraint: if we suddenly experience a 50x spike in concurrent writes with strict consistency requirements across regions, how would you prevent split-brain and minimize replication lag?`;
+      } else if (evaluation.branchDecision === 'PROBE_DEEPER') {
+        responseText = `That covers the baseline. However, digging into the trade-offs: what happens if the worker thread pool is exhausted or a deadlock occurs in that exact flow? Walk me through how you'd diagnose and mitigate that.`;
+      } else {
+        responseText = `Good point. Let's transition to the next dimension: how would you structure the schema and indexing strategy for high-frequency queries on this dataset?`;
+      }
+    } else {
+      if (evaluation.branchDecision === 'LEVEL_UP') {
+        responseText = `That's a very clear summary of the Situation and Task. Now, looking at the Result and leadership dimensions: how did you measure success, what pushback did you handle from executive stakeholders, and what would you improve today?`;
+      } else {
+        responseText = `Thank you for sharing that context. Focusing specifically on the Action step of the STAR framework: what specific technical or interpersonal decisions did you personally spearhead to resolve the deadlock?`;
+      }
+    }
+  }
+
+  return {
+    message: responseText,
+    telemetry: updatedTelemetry,
+    evaluation,
+  };
+}
+
+export async function generateNextResponse(
+  sessionId: string,
+  userMessage: string,
+): Promise<string> {
+  const result = await generateNextAdaptiveResponse(sessionId, userMessage);
+  return result.message;
 }

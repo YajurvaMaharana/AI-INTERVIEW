@@ -159,6 +159,8 @@ export async function syncUserToDatabase(
     avatar_url?: string | null;
     bio?: string | null;
     target_role?: string | null;
+    skills?: string[] | null;
+    experience_level?: string | null;
   },
   accessToken?: string
 ): Promise<User | null> {
@@ -175,6 +177,8 @@ export async function syncUserToDatabase(
   const avatarUrl = user.avatar_url || user.user_metadata?.avatar_url || null;
   const bio = user.bio !== undefined ? user.bio : (user.user_metadata?.bio || '');
   const targetRole = user.target_role !== undefined ? user.target_role : (user.user_metadata?.target_role || '');
+  const skills = user.skills !== undefined ? user.skills : (user.user_metadata?.skills || null);
+  const experienceLevel = user.experience_level !== undefined ? user.experience_level : (user.user_metadata?.experience_level || null);
 
   // If user provided a real access token, use a scoped client so auth.uid() passes RLS
   let scopedClient: SupabaseClient | null = null;
@@ -197,20 +201,21 @@ export async function syncUserToDatabase(
   const client = scopedClient || getSupabaseAdminClient();
   if (client) {
     try {
+      const payload: Record<string, any> = {
+        id: userId,
+        email,
+        display_name: displayName,
+        avatar_url: avatarUrl,
+        bio,
+        target_role: targetRole,
+        updated_at: new Date().toISOString(),
+      };
+      if (skills !== null) payload.skills = skills;
+      if (experienceLevel !== null) payload.experience_level = experienceLevel;
+
       const { data, error } = await client
         .from('users')
-        .upsert(
-          {
-            id: userId,
-            email,
-            display_name: displayName,
-            avatar_url: avatarUrl,
-            bio,
-            target_role: targetRole,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'id' }
-        )
+        .upsert(payload, { onConflict: 'id' })
         .select()
         .single();
 
@@ -221,19 +226,20 @@ export async function syncUserToDatabase(
       }
       if (error) {
         console.warn('[db.service] Supabase users upsert notice:', error.message);
-        // If upsert was blocked by RLS INSERT policy, attempt UPDATE
+        // If upsert was blocked or failed due to extra columns, try basic columns
         try {
+          const basicPayload: Record<string, any> = {
+            id: userId,
+            email,
+            display_name: displayName,
+            avatar_url: avatarUrl,
+            bio,
+            target_role: targetRole,
+            updated_at: new Date().toISOString(),
+          };
           const { data: updateData, error: updateError } = await client
             .from('users')
-            .update({
-              email,
-              display_name: displayName,
-              avatar_url: avatarUrl,
-              bio,
-              target_role: targetRole,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', userId)
+            .upsert(basicPayload, { onConflict: 'id' })
             .select()
             .single();
 
@@ -260,6 +266,8 @@ export async function syncUserToDatabase(
     avatar_url: avatarUrl,
     bio: bio || existing?.bio || '',
     target_role: targetRole || existing?.target_role || '',
+    skills: skills || existing?.skills || null,
+    experience_level: experienceLevel || existing?.experience_level || null,
     created_at: existing?.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -281,6 +289,8 @@ export async function createUser(data: UserInsert): Promise<User> {
           avatar_url: data.avatar_url || null,
           bio: data.bio || '',
           target_role: data.target_role || '',
+          skills: data.skills || null,
+          experience_level: data.experience_level || null,
         })
         .select()
         .single();
@@ -304,6 +314,8 @@ export async function createUser(data: UserInsert): Promise<User> {
     avatar_url: data.avatar_url || null,
     bio: data.bio || '',
     target_role: data.target_role || '',
+    skills: data.skills || null,
+    experience_level: data.experience_level || null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -363,6 +375,8 @@ export async function updateUser(id: string, data: UserUpdate): Promise<User> {
     avatar_url: data.avatar_url !== undefined ? data.avatar_url : (existing?.avatar_url ?? null),
     bio: data.bio !== undefined ? data.bio : (existing?.bio ?? ''),
     target_role: data.target_role !== undefined ? data.target_role : (existing?.target_role ?? ''),
+    skills: data.skills !== undefined ? data.skills : (existing?.skills ?? null),
+    experience_level: data.experience_level !== undefined ? data.experience_level : (existing?.experience_level ?? null),
     created_at: existing?.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

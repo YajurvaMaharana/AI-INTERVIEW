@@ -2,23 +2,40 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionsByUserId } from "@/lib/services/db.service";
 import AscendXDashboard from "@/components/dashboard/AscendXDashboard";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let formattedSessions: Array<{
+    id: string;
+    role: string;
+    difficulty: string;
+    status: string;
+    created_at: string;
+  }> = [];
 
-  // Load user sessions if authenticated on server; do not force redirect
-  const sessions = user ? await getSessionsByUserId(user.id) : [];
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const formattedSessions = sessions.map((s) => ({
-    id: s.id,
-    role: s.role,
-    difficulty: s.difficulty,
-    status: s.status,
-    created_at: s.created_at,
-  }));
+    if (user?.id) {
+      const sessions = await getSessionsByUserId(user.id);
+      if (Array.isArray(sessions)) {
+        formattedSessions = sessions.map((s) => ({
+          id: s.id,
+          role: s.role || "Software Engineer",
+          difficulty: s.difficulty || "medium",
+          status: s.status || "completed",
+          created_at: s.created_at || new Date().toISOString(),
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn("[DashboardPage] Server RSC load notice:", err);
+  }
 
   return <AscendXDashboard initialSessions={formattedSessions} />;
 }
+
 

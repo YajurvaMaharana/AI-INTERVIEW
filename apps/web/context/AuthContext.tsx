@@ -20,11 +20,15 @@ export interface NormalizedUser {
   avatar_url?: string | null;
   bio?: string;
   target_role?: string;
+  skills?: string[];
+  experience_level?: string;
   user_metadata?: {
     display_name?: string;
     full_name?: string;
     bio?: string;
     target_role?: string;
+    skills?: string[];
+    experience_level?: string;
     avatar_url?: string | null;
     [key: string]: any;
   };
@@ -45,8 +49,11 @@ export interface AuthContextType {
     display_name?: string;
     bio?: string;
     target_role?: string;
+    skills?: string[];
+    experience_level?: string;
     avatar_url?: string | null;
   }) => Promise<boolean>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -150,22 +157,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  // Fetch full user record from Supabase users table
+  const fetchUserProfileFromDb = useCallback(async (userId: string, currentSessionUser?: any) => {
+    if (!userId) return null;
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (!error && data) {
+        const mergedUser: NormalizedUser = {
+          ...(currentSessionUser || {}),
+          id: data.id,
+          email: data.email || currentSessionUser?.email,
+          display_name: data.display_name,
+          bio: data.bio,
+          target_role: data.target_role,
+          avatar_url: data.avatar_url,
+          skills: data.skills,
+          experience_level: data.experience_level,
+          user_metadata: {
+            ...(currentSessionUser?.user_metadata || {}),
+            display_name: data.display_name,
+            full_name: data.display_name,
+            bio: data.bio,
+            target_role: data.target_role,
+            avatar_url: data.avatar_url,
+            skills: data.skills,
+            experience_level: data.experience_level,
+          },
+        };
+        setUser(mergedUser);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("sb-mock-user", JSON.stringify(mergedUser));
+          } catch {}
+        }
+        return mergedUser;
+      }
+    } catch (err) {
+      console.warn("[AuthContext] fetchUserProfileFromDb error:", err);
+    }
+    return null;
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (user?.id) {
+      await fetchUserProfileFromDb(user.id, user);
+    }
+  }, [user, fetchUserProfileFromDb]);
+
   // Update candidate profile with direct Supabase + local cache sync
   const updateUserProfile = useCallback(
     async (updates: {
       display_name?: string;
       bio?: string;
       target_role?: string;
+      skills?: string[];
+      experience_level?: string;
       avatar_url?: string | null;
     }): Promise<boolean> => {
       if (!user?.id) return false;
 
       const currentId = user.id;
       const currentEmail = user.email || "candidate@example.com";
-      const newDisplayName = updates.display_name !== undefined ? updates.display_name : (user as any).display_name || "Candidate";
-      const newBio = updates.bio !== undefined ? updates.bio : (user as any).bio || "";
-      const newRole = updates.target_role !== undefined ? updates.target_role : (user as any).target_role || "Full-Stack Software Engineer";
-      const newAvatar = updates.avatar_url !== undefined ? updates.avatar_url : (user as any).avatar_url || null;
+      const u = user as any;
+      const newDisplayName = updates.display_name !== undefined ? updates.display_name : u.display_name || "Candidate";
+      const newBio = updates.bio !== undefined ? updates.bio : u.bio || "";
+      const newRole = updates.target_role !== undefined ? updates.target_role : u.target_role || "Full-Stack Software Engineer";
+      const newAvatar = updates.avatar_url !== undefined ? updates.avatar_url : u.avatar_url || null;
+      const newSkills = updates.skills !== undefined ? updates.skills : u.skills || null;
+      const newExpLevel = updates.experience_level !== undefined ? updates.experience_level : u.experience_level || null;
 
       const updatedUserPayload: NormalizedUser = {
         ...user,
@@ -175,6 +240,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         bio: newBio,
         target_role: newRole,
         avatar_url: newAvatar,
+        skills: newSkills || undefined,
+        experience_level: newExpLevel || undefined,
         user_metadata: {
           ...(user.user_metadata || {}),
           display_name: newDisplayName,
@@ -182,6 +249,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           bio: newBio,
           target_role: newRole,
           avatar_url: newAvatar,
+          skills: newSkills || undefined,
+          experience_level: newExpLevel || undefined,
         },
       };
 
@@ -199,19 +268,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 2. Persist to Supabase and API
       const supabase = createClient();
       try {
+        const dbPayload: Record<string, any> = {
+          id: currentId,
+          email: currentEmail,
+          display_name: newDisplayName,
+          bio: newBio,
+          target_role: newRole,
+          avatar_url: newAvatar,
+          updated_at: new Date().toISOString(),
+        };
+        if (newSkills) dbPayload.skills = newSkills;
+        if (newExpLevel) dbPayload.experience_level = newExpLevel;
+
         await Promise.allSettled([
-          supabase.from("users").upsert(
-            {
-              id: currentId,
-              email: currentEmail,
-              display_name: newDisplayName,
-              bio: newBio,
-              target_role: newRole,
-              avatar_url: newAvatar,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "id" }
-          ),
+          supabase.from("users").upsert(dbPayload, { onConflict: "id" }),
           supabase.auth.updateUser({
             data: {
               display_name: newDisplayName,
@@ -219,6 +289,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               bio: newBio,
               target_role: newRole,
               avatar_url: newAvatar,
+              skills: newSkills,
+              experience_level: newExpLevel,
             },
           }),
           fetch("/api/user/profile", {
@@ -231,6 +303,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               bio: newBio,
               target_role: newRole,
               avatar_url: newAvatar,
+              skills: newSkills,
+              experience_level: newExpLevel,
             }),
           }),
         ]);
@@ -251,11 +325,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 1. Check existing session
     supabase.auth
       .getSession()
-      .then(({ data }: { data: { session: Session | null } }) => {
+      .then(async ({ data }: { data: { session: Session | null } }) => {
         if (!isMounted || isSigningOutRef.current) return;
         if (data?.session?.user) {
           setSession(data.session);
           setUser(data.session.user);
+          // Fetch full profile from database to get synced profile data
+          await fetchUserProfileFromDb(data.session.user.id, data.session.user);
         } else {
           // Check local fallback
           if (typeof window !== "undefined") {
@@ -265,6 +341,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const parsed = JSON.parse(stored);
                 if (parsed?.id && parsed?.email) {
                   setUser(parsed);
+                  await fetchUserProfileFromDb(parsed.id, parsed);
                 }
               }
             } catch {}
@@ -280,24 +357,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = (supabase.auth.onAuthStateChange as any)(
-      (_event: string, newSession: Session | null) => {
+      async (_event: string, newSession: Session | null) => {
         if (!isMounted || isSigningOutRef.current) return;
 
         const nextUser = newSession?.user ?? null;
         setSession(newSession ?? null);
 
-        setUser((prev) => {
-          if (!prev && !nextUser) return null;
-          if (
-            prev &&
-            nextUser &&
-            prev.id === nextUser.id &&
-            prev.email === nextUser.email
-          ) {
-            return prev; // Keep same reference to prevent re-render loop
-          }
-          return nextUser;
-        });
+        if (nextUser) {
+          setUser(nextUser);
+          await fetchUserProfileFromDb(nextUser.id, nextUser);
+        } else {
+          setUser(null);
+        }
 
         setIsLoading(false);
       }
@@ -309,17 +380,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         subscription?.unsubscribe?.();
       } catch {}
     };
-  }, []);
+  }, [fetchUserProfileFromDb]);
 
   // Bulletproof Sign Out
   const signOut = useCallback(async () => {
     isSigningOutRef.current = true;
     const supabase = createClient();
 
-    // 1. Clear local credentials immediately
+    // 1. Clear local credentials and session storage immediately
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem("sb-mock-user");
+        // Clear any other Supabase or auth related items in storage
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith("sb-") || key.includes("supabase")) {
+            localStorage.removeItem(key);
+          }
+        });
+        sessionStorage.clear();
         document.cookie = "sb-mock-auth=; path=/; max-age=0; SameSite=Lax";
       } catch {}
     }
@@ -334,9 +412,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn("[AuthContext] Sign out notice:", e);
     }
 
-    // 3. Clean navigation to home on explicit sign out
+    // 3. Immediate hard redirect to /auth
     if (typeof window !== "undefined") {
-      window.location.href = "/";
+      window.location.href = "/auth";
     }
   }, []);
 
@@ -347,6 +425,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     syncUser,
     updateUserProfile,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

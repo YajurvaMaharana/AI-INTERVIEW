@@ -25,6 +25,8 @@ export interface User {
   avatar_url: string | null;
   bio?: string | null;
   target_role?: string | null;
+  skills?: string[] | null;
+  experience_level?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -70,6 +72,8 @@ export interface UserInsert {
   avatar_url?: string | null;
   bio?: string | null;
   target_role?: string | null;
+  skills?: string[] | null;
+  experience_level?: string | null;
 }
 
 export interface InterviewSessionInsert {
@@ -104,6 +108,8 @@ export interface UserUpdate {
   avatar_url?: string | null;
   bio?: string | null;
   target_role?: string | null;
+  skills?: string[] | null;
+  experience_level?: string | null;
 }
 
 export interface InterviewSessionUpdate {

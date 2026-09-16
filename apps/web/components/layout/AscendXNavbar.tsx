@@ -387,27 +387,54 @@ export default function AscendXNavbar({
                 );
               })}
 
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between px-2">
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1 px-1">
                 <Link
                   href="/profile"
+                  id="mobile-nav-profile-link"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 flex items-center gap-1.5 py-1"
+                  className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-slate-800 rounded-xl"
                 >
-                  <User className="w-3.5 h-3.5 text-orange-500" />
-                  <span>Profile Settings</span>
+                  <User className="w-4 h-4 text-orange-500" />
+                  <span>Candidate Profile Page</span>
                 </Link>
 
                 <button
                   type="button"
-                  onClick={async () => {
+                  id="mobile-nav-quick-edit-btn"
+                  onClick={() => {
                     setIsMobileMenuOpen(false);
-                    await signOut();
+                    setIsEditModalOpen(true);
                   }}
-                  className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 py-1"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-slate-800 rounded-xl text-left"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Log Out</span>
+                  <Edit3 className="w-4 h-4 text-orange-500" />
+                  <span>Quick Edit Profile</span>
                 </button>
+
+                <Link
+                  href="/interview/new"
+                  id="mobile-nav-start-interview-link"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-slate-800 rounded-xl"
+                >
+                  <Bot className="w-4 h-4 text-slate-400" />
+                  <span>Start Mock Interview</span>
+                </Link>
+
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                  <button
+                    type="button"
+                    id="mobile-nav-logout-btn"
+                    onClick={async () => {
+                      setIsMobileMenuOpen(false);
+                      await signOut();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl text-left font-medium"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Log Out</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
