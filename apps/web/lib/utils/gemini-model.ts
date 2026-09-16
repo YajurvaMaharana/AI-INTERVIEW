@@ -12,7 +12,7 @@ export function resolveGeminiModel(): string {
     envModel.includes('1.5') ||
     envModel.includes('2.0')
   ) {
-    return 'gemini-3.7-flash';
+    return 'gemini-3.8-flash';
   }
   return envModel.replace(/^models\//, '');
 }
@@ -24,10 +24,10 @@ export function getGeminiModelCascade(): string[] {
   const primary = resolveGeminiModel();
   const models = [
     primary,
-    'gemini-3.7-flash',
+    'gemini-flash-latest',
     'gemini-3.8-flash',
     'gemini-3.1-flash-lite',
-    'gemini-flash-latest',
+    'gemini-3.7-flash',
   ];
 
   // Return unique list preserving order
@@ -64,7 +64,7 @@ export function isTransientGeminiError(err: any): boolean {
 /**
  * Executes a generateContent call across the model fallback cascade.
  * If a 503 (high demand) or 404/429 error occurs on a model, it transparently
- * tries the next candidate model in the cascade with brief backoff.
+ * retries and tries the next candidate model in the cascade with brief backoff.
  */
 export async function generateWithModelFallback(
   genAI: any,
@@ -82,35 +82,39 @@ export async function generateWithModelFallback(
 
   for (let i = 0; i < cascade.length; i++) {
     const currentModel = cascade[i];
-    try {
-      const response = await genAI.models.generateContent({
-        model: currentModel,
-        contents: params.contents,
-        config: params.config,
-      });
 
-      if (response && (response.text !== undefined || response.candidates?.length > 0)) {
-        return {
-          text: response.text,
-          modelUsed: currentModel,
-        };
-      }
-    } catch (err: any) {
-      lastError = err;
-      const isTransient = isTransientGeminiError(err);
-      console.warn(
-        `[GeminiModelCascade] Model '${currentModel}' failed (${err?.message || err}). ${
-          i < cascade.length - 1 && isTransient ? 'Failing over to next model in cascade...' : ''
-        }`
-      );
+    // Try up to 2 attempts per candidate model (immediate + 1 quick retry for transient 503)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await genAI.models.generateContent({
+          model: currentModel,
+          contents: params.contents,
+          config: params.config,
+        });
 
-      if (i < cascade.length - 1 && isTransient) {
-        // Brief jitter delay before trying next model
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        continue;
-      } else if (!isTransient) {
-        // Non-transient errors (e.g. invalid arguments) should throw immediately
-        throw err;
+        if (response && (response.text !== undefined || response.candidates?.length > 0)) {
+          return {
+            text: response.text,
+            modelUsed: currentModel,
+          };
+        }
+      } catch (err: any) {
+        lastError = err;
+        const isTransient = isTransientGeminiError(err);
+
+        if (isTransient) {
+          if (attempt === 0) {
+            // Quick backoff before second attempt on same model
+            await new Promise((resolve) => setTimeout(resolve, 400));
+            continue;
+          } else {
+            // Move on to next model in cascade
+            break;
+          }
+        } else {
+          // Non-transient error (e.g. invalid arguments/syntax)
+          throw err;
+        }
       }
     }
   }
