@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------------
 
 import { GoogleGenAI, Type } from '@google/genai';
-import { resolveGeminiModel } from '@/lib/utils/gemini-model';
+import { resolveGeminiModel, generateWithModelFallback } from '@/lib/utils/gemini-model';
 import type { ResumeParsedData, ResumeProject, ResumeExperience, ResumeEducation, ResumeSkills } from '../types/database.types';
 import { getSupabaseAdminClient, syncUserToDatabase, getUserById } from './db.service';
 
@@ -211,8 +211,8 @@ Rules:
       });
     }
 
-    const response = await genAI.models.generateContent({
-      model: modelName,
+    const response = await generateWithModelFallback(genAI, {
+      preferredModel: modelName,
       contents,
       config: {
         systemInstruction,
@@ -229,7 +229,7 @@ Rules:
     const parsed: ResumeParsedData = JSON.parse(responseText);
     return normalizeParsedData(parsed, fileName);
   } catch (err: any) {
-    console.warn('[resume-parser] Gemini extraction notice:', err?.message);
+    console.info('[resume-parser] Using fallback heuristic parser due to capacity/network:', err?.message || err);
     return generateFallbackParsedResume(fileName, base64PdfOrText);
   }
 }

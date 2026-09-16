@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------------
 
 import { GoogleGenAI, Type } from '@google/genai';
-import { resolveGeminiModel } from '@/lib/utils/gemini-model';
+import { resolveGeminiModel, generateWithModelFallback } from '@/lib/utils/gemini-model';
 import type { JobDescriptionParsedData } from '../types/database.types';
 
 // ---------------------------------------------------------------------------
@@ -232,8 +232,8 @@ ${rawText.slice(0, 25000)}
       });
     }
 
-    const response = await genAI.models.generateContent({
-      model: modelName,
+    const response = await generateWithModelFallback(genAI, {
+      preferredModel: modelName,
       contents,
       config: {
         systemInstruction:
@@ -267,7 +267,7 @@ ${rawText.slice(0, 25000)}
 
     return result;
   } catch (err: any) {
-    console.warn('[jd-parser] Gemini extraction notice:', err?.message || err);
+    console.info('[jd-parser] Using fallback heuristic parser due to capacity/network:', err?.message || err);
     return generateFallbackJDParsedData(rawText, undefined);
   }
 }

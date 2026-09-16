@@ -81,9 +81,8 @@ export default function AscendXNavbar({
     },
     {
       name: "Resume & JD Grounding",
-      href: "#grounding",
+      href: "/resume-jd-grounding",
       icon: FileText,
-      action: onOpenGroundingModal,
     },
     {
       name: "Voice & Speech Coach",

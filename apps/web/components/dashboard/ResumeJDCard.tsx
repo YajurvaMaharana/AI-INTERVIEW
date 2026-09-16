@@ -136,22 +136,31 @@ export default function ResumeJDCard({ onResumeUpload }: ResumeJDCardProps) {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <a
+                href="/resume-jd-grounding"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="text-xs font-semibold text-[#E87A42] hover:text-[#d86932] hover:underline flex items-center gap-1"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#E87A42] hover:bg-[#d86932] shadow-sm flex items-center gap-1.5"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Save Grounding Context</span>
-              </button>
+                <span>View Full Gap Analysis Matrix →</span>
+              </a>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#E87A42] hover:bg-[#d86932] shadow-sm flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Save Grounding Context</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

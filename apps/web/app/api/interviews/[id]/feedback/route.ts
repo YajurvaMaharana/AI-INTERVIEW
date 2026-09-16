@@ -7,7 +7,7 @@ import {
   updateSession,
 } from '@/lib/services/db.service';
 import { GoogleGenAI } from '@google/genai';
-import { resolveGeminiModel } from '@/lib/utils/gemini-model';
+import { resolveGeminiModel, generateWithModelFallback } from '@/lib/utils/gemini-model';
 import type { JobDescriptionParsedData } from '@/lib/types/database.types';
 
 interface FeedbackScoreCategory {
@@ -92,8 +92,8 @@ Return ONLY a valid JSON object matching this exact TypeScript structure with no
   "improvements": ["Improvement 1", "Improvement 2", "Improvement 3"]
 }`;
 
-      const response = await client.models.generateContent({
-        model: modelName,
+      const response = await generateWithModelFallback(client, {
+        preferredModel: modelName,
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
       });
 
@@ -105,7 +105,7 @@ Return ONLY a valid JSON object matching this exact TypeScript structure with no
         return parsed as FeedbackPayload;
       }
     } catch (e: any) {
-      console.warn('[api/feedback] Gemini evaluation notice:', e?.message);
+      console.info('[api/feedback] Using structured fallback evaluation due to capacity/network:', e?.message || e);
     }
   }
 

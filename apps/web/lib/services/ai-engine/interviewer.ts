@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------------
 
 import { GoogleGenAI } from '@google/genai';
-import { resolveGeminiModel } from '@/lib/utils/gemini-model';
+import { resolveGeminiModel, generateWithModelFallback } from '@/lib/utils/gemini-model';
 import { TECHNICAL_SYSTEM_PROMPT } from './prompts/technical.prompt';
 import { HR_SYSTEM_PROMPT } from './prompts/hr.prompt';
 import {
@@ -142,8 +142,8 @@ async function callGeminiAPI(messages: ChatMessage[]): Promise<string> {
       });
     }
 
-    const result = await client.models.generateContent({
-      model: modelName,
+    const result = await generateWithModelFallback(client, {
+      preferredModel: modelName,
       contents,
       config: {
         systemInstruction: systemMessage?.content,
