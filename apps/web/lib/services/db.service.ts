@@ -165,6 +165,10 @@ export async function syncUserToDatabase(
     preferred_language?: string | null;
     interview_goals?: string[] | string | null;
     target_companies?: string[] | null;
+    resume_url?: string | null;
+    resume_filename?: string | null;
+    resume_parsed_at?: string | null;
+    resume_data?: any;
   },
   accessToken?: string
 ): Promise<User | null> {
@@ -187,6 +191,10 @@ export async function syncUserToDatabase(
   const preferredLanguage = user.preferred_language !== undefined ? user.preferred_language : (user.user_metadata?.preferred_language || null);
   const interviewGoals = user.interview_goals !== undefined ? user.interview_goals : (user.user_metadata?.interview_goals || null);
   const targetCompanies = user.target_companies !== undefined ? user.target_companies : (user.user_metadata?.target_companies || null);
+  const resumeUrl = user.resume_url !== undefined ? user.resume_url : (user.user_metadata?.resume_url || null);
+  const resumeFilename = user.resume_filename !== undefined ? user.resume_filename : (user.user_metadata?.resume_filename || null);
+  const resumeParsedAt = user.resume_parsed_at !== undefined ? user.resume_parsed_at : (user.user_metadata?.resume_parsed_at || null);
+  const resumeData = user.resume_data !== undefined ? user.resume_data : (user.user_metadata?.resume_data || null);
 
   // If user provided a real access token, use a scoped client so auth.uid() passes RLS
   let scopedClient: SupabaseClient | null = null;
@@ -224,6 +232,10 @@ export async function syncUserToDatabase(
       if (preferredLanguage !== null) payload.preferred_language = preferredLanguage;
       if (interviewGoals !== null) payload.interview_goals = interviewGoals;
       if (targetCompanies !== null) payload.target_companies = targetCompanies;
+      if (resumeUrl !== null) payload.resume_url = resumeUrl;
+      if (resumeFilename !== null) payload.resume_filename = resumeFilename;
+      if (resumeParsedAt !== null) payload.resume_parsed_at = resumeParsedAt;
+      if (resumeData !== null) payload.resume_data = resumeData;
 
       const { data, error } = await client
         .from('users')
@@ -284,6 +296,10 @@ export async function syncUserToDatabase(
     preferred_language: preferredLanguage || existing?.preferred_language || null,
     interview_goals: interviewGoals || existing?.interview_goals || null,
     target_companies: targetCompanies || existing?.target_companies || null,
+    resume_url: resumeUrl !== null ? resumeUrl : (existing?.resume_url || null),
+    resume_filename: resumeFilename !== null ? resumeFilename : (existing?.resume_filename || null),
+    resume_parsed_at: resumeParsedAt !== null ? resumeParsedAt : (existing?.resume_parsed_at || null),
+    resume_data: resumeData !== null ? resumeData : (existing?.resume_data || null),
     created_at: existing?.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -311,6 +327,10 @@ export async function createUser(data: UserInsert): Promise<User> {
           preferred_language: data.preferred_language || null,
           interview_goals: data.interview_goals || null,
           target_companies: data.target_companies || null,
+          resume_url: data.resume_url || null,
+          resume_filename: data.resume_filename || null,
+          resume_parsed_at: data.resume_parsed_at || null,
+          resume_data: data.resume_data || null,
         })
         .select()
         .single();
@@ -340,6 +360,10 @@ export async function createUser(data: UserInsert): Promise<User> {
     preferred_language: data.preferred_language || null,
     interview_goals: data.interview_goals || null,
     target_companies: data.target_companies || null,
+    resume_url: data.resume_url || null,
+    resume_filename: data.resume_filename || null,
+    resume_parsed_at: data.resume_parsed_at || null,
+    resume_data: data.resume_data || null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -405,6 +429,10 @@ export async function updateUser(id: string, data: UserUpdate): Promise<User> {
     preferred_language: data.preferred_language !== undefined ? data.preferred_language : (existing?.preferred_language ?? null),
     interview_goals: data.interview_goals !== undefined ? data.interview_goals : (existing?.interview_goals ?? null),
     target_companies: data.target_companies !== undefined ? data.target_companies : (existing?.target_companies ?? null),
+    resume_url: data.resume_url !== undefined ? data.resume_url : (existing?.resume_url ?? null),
+    resume_filename: data.resume_filename !== undefined ? data.resume_filename : (existing?.resume_filename ?? null),
+    resume_parsed_at: data.resume_parsed_at !== undefined ? data.resume_parsed_at : (existing?.resume_parsed_at ?? null),
+    resume_data: data.resume_data !== undefined ? data.resume_data : (existing?.resume_data ?? null),
     created_at: existing?.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -476,6 +504,8 @@ export async function createSession(data: InterviewSessionInsert): Promise<Inter
           role: data.role || 'Software Engineer',
           difficulty: data.difficulty || 'medium',
           status: data.status || 'in_progress',
+          jd_data: data.jd_data || null,
+          jd_raw_text: data.jd_raw_text || null,
         })
         .select()
         .single();
@@ -501,6 +531,8 @@ export async function createSession(data: InterviewSessionInsert): Promise<Inter
     role: data.role || 'Software Engineer',
     difficulty: data.difficulty || 'medium',
     status: data.status || 'in_progress',
+    jd_data: data.jd_data || null,
+    jd_raw_text: data.jd_raw_text || null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -594,6 +626,8 @@ export async function updateSession(
     role: data.role || existing?.role || 'Software Engineer',
     difficulty: data.difficulty || existing?.difficulty || 'medium',
     status: data.status || existing?.status || 'in_progress',
+    jd_data: data.jd_data !== undefined ? data.jd_data : (existing?.jd_data || null),
+    jd_raw_text: data.jd_raw_text !== undefined ? data.jd_raw_text : (existing?.jd_raw_text || null),
     created_at: existing?.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

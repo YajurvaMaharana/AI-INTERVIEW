@@ -27,8 +27,10 @@ import {
   Building2,
   KeyRound,
   X,
+  UploadCloud,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { ResumeManager } from "@/components/profile/ResumeManager";
 
 // Pre-configured avatar presets
 const AVATAR_PRESETS = [
@@ -242,6 +244,29 @@ function ProfilePageContent() {
       }
     }
   }, [user]);
+
+  const handleResumeParsed = (parsed: any) => {
+    if (parsed) {
+      if (parsed.full_name && (!displayName || displayName === "Candidate")) {
+        setDisplayName(parsed.full_name);
+      }
+      if (parsed.headline) {
+        setTargetRole(parsed.headline);
+      }
+      if (parsed.summary && (!bio || bio.length < 30)) {
+        setBio(parsed.summary.slice(0, 480));
+      }
+      const extractedSkills = [
+        ...(parsed.skills?.languages || []),
+        ...(parsed.skills?.frameworks || []),
+        ...(parsed.skills?.databases || []),
+        ...(parsed.skills?.cloud_and_devops || []),
+      ];
+      if (extractedSkills.length > 0) {
+        setSelectedSkills((prev) => Array.from(new Set([...prev, ...extractedSkills.slice(0, 8)])));
+      }
+    }
+  };
 
   const toggleSkill = (skill: string) => {
     if (selectedSkills.includes(skill)) {
@@ -552,11 +577,27 @@ function ProfilePageContent() {
             </div>
           </div>
 
-          {/* 2. Identity & Contact */}
-          <div className="space-y-3">
+          {/* 2. Resume Upload & AI Grounding Engine */}
+          <div className="space-y-3 pt-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UploadCloud className="w-4 h-4 text-orange-500" />
+                <span>2. Resume Upload & AI Grounding Pipeline</span>
+              </div>
+              <span className="text-[11px] text-orange-600 dark:text-orange-400 font-semibold flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                Powers Interview Personalization
+              </span>
+            </label>
+
+            <ResumeManager onParsedSuccess={handleResumeParsed} />
+          </div>
+
+          {/* 3. Identity & Contact */}
+          <div className="space-y-3 pt-4 border-t border-slate-200/80 dark:border-slate-800">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
               <Briefcase className="w-4 h-4 text-orange-500" />
-              <span>2. Basic Information & Target Engineering Role</span>
+              <span>3. Basic Information & Target Engineering Role</span>
             </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

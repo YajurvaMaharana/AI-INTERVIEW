@@ -26,7 +26,12 @@ import {
   type InterviewCreateResponse,
 } from "@/lib/validations/interview";
 import PersonaSelector, { PersonaId } from "@/components/dashboard/PersonaSelector";
+import JobDescriptionInput from "@/components/interview/JobDescriptionInput";
+import type { JobDescriptionParsedData } from "@/lib/types/database.types";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
+import Link from "next/link";
+import { FileCheck, Sparkles as SparklesIcon } from "lucide-react";
 
 const INTERVIEW_TYPES = [
   {
@@ -91,12 +96,18 @@ const PRESET_ROLES = [
 ];
 
 async function createInterview(
-  data: InterviewSetupValues
+  data: InterviewSetupValues,
+  jdData?: JobDescriptionParsedData | null,
+  jdRawText?: string
 ): Promise<InterviewCreateResponse> {
   const res = await fetch("/api/interviews", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      ...data,
+      jdData,
+      jdRawText,
+    }),
   });
 
   if (!res.ok) {
@@ -112,12 +123,20 @@ async function createInterview(
 export default function SetupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const initialPersonaParam = searchParams.get("persona") as PersonaId | null;
+
+  const resumeData = (user as any)?.resume_data;
+  const resumeFilename = (user as any)?.resume_filename;
 
   const [selectedPersona, setSelectedPersona] = useState<PersonaId>(
     initialPersonaParam || "tech-grinder"
   );
   const [serverError, setServerError] = useState<string | null>(null);
+  const [parsedJD, setParsedJD] = useState<JobDescriptionParsedData | null>(null);
+  const [jdRawText, setJdRawText] = useState<string>("");
+
+  const defaultRole = (user as any)?.target_role || resumeData?.headline || "Senior Full-Stack Engineer";
 
   const {
     register,
@@ -129,7 +148,7 @@ export default function SetupForm() {
     resolver: zodResolver(interviewSetupSchema),
     defaultValues: {
       type: initialPersonaParam === "hr-partner" ? "HR" : "Technical",
-      role: "Senior Full-Stack Engineer",
+      role: defaultRole,
       difficulty: "Medium",
     },
   });
@@ -137,6 +156,13 @@ export default function SetupForm() {
   const selectedType = watch("type");
   const selectedDifficulty = watch("difficulty");
   const currentRole = watch("role");
+
+  // Pre-fill role when user loads
+  useEffect(() => {
+    if ((user as any)?.target_role) {
+      setValue("role", (user as any).target_role, { shouldValidate: true });
+    }
+  }, [user, setValue]);
 
   // Sync persona changes with interview type default if user switches persona
   useEffect(() => {
@@ -151,7 +177,7 @@ export default function SetupForm() {
     setServerError(null);
 
     try {
-      const { sessionId } = await createInterview(data);
+      const { sessionId } = await createInterview(data, parsedJD, jdRawText);
       router.push(`/interview/${sessionId}`);
     } catch (err) {
       setServerError(
@@ -190,6 +216,49 @@ export default function SetupForm() {
             </p>
           </div>
         </div>
+
+        {/* ── Resume Grounding Context Banner ── */}
+        {resumeData ? (
+          <div className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800/60 animate-in fade-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                <FileCheck className="w-5 h-5" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                    Resume Grounded: {resumeFilename || "Candidate Profile Active"}
+                  </span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                    Live Grounding
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                  Questions will reference your {resumeData.projects?.length || 0} projects, {resumeData.skills?.languages?.slice(0, 3).join(", ") || "tech stack"}, and metrics.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/profile"
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0"
+            >
+              Manage
+            </Link>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-100/80 dark:bg-[#1C2230]/60 border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
+              <SparklesIcon className="w-4 h-4 text-[#E8602E]" />
+              <span>Want personalized questions targeting your real projects & metrics?</span>
+            </div>
+            <Link
+              href="/profile"
+              className="text-xs font-bold text-[#E8602E] hover:text-[#d85322] hover:underline shrink-0"
+            >
+              Upload Resume
+            </Link>
+          </div>
+        )}
 
         {/* ── Error Banner ── */}
         {serverError && (
@@ -286,7 +355,24 @@ export default function SetupForm() {
           </div>
 
           {/* ========================================================= */}
-          {/* 2. INTERVIEWER PERSONA SELECTOR                           */}
+          {/* 2. TARGET JOB DESCRIPTION (JD) CALIBRATION                */}
+          {/* ========================================================= */}
+          <JobDescriptionInput
+            parsedJD={parsedJD}
+            onJDParsed={(extracted, raw) => {
+              setParsedJD(extracted);
+              setJdRawText(raw);
+            }}
+            onAutoFillRole={(newRole, suggestedDiff) => {
+              setValue("role", newRole, { shouldValidate: true });
+              if (suggestedDiff) {
+                setValue("difficulty", suggestedDiff, { shouldValidate: true });
+              }
+            }}
+          />
+
+          {/* ========================================================= */}
+          {/* 3. INTERVIEWER PERSONA SELECTOR                           */}
           {/* ========================================================= */}
           <div className="bg-white dark:bg-[#181E29] border border-slate-200/80 dark:border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-2xs">
             <PersonaSelector
@@ -296,7 +382,7 @@ export default function SetupForm() {
           </div>
 
           {/* ========================================================= */}
-          {/* 3. ROLE & DOMAIN INPUT                                    */}
+          {/* 4. ROLE & DOMAIN INPUT                                    */}
           {/* ========================================================= */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -305,7 +391,7 @@ export default function SetupForm() {
                 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2"
               >
                 <Briefcase className="w-3.5 h-3.5 text-[#E87A42]" />
-                <span>2. Target Role / Domain</span>
+                <span>3. Target Role / Domain</span>
               </label>
               <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                 Tailors technical domain & terminology
@@ -366,13 +452,13 @@ export default function SetupForm() {
           </div>
 
           {/* ========================================================= */}
-          {/* 4. DIFFICULTY SELECTOR PILLS                              */}
+          {/* 5. DIFFICULTY SELECTOR PILLS                              */}
           {/* ========================================================= */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
                 <Layers className="w-3.5 h-3.5 text-[#E87A42]" />
-                <span>3. Difficulty Calibration</span>
+                <span>4. Difficulty Calibration</span>
               </label>
               <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                 Dynamic follow-up rigor

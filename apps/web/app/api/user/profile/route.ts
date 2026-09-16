@@ -37,6 +37,10 @@ export async function POST(request: NextRequest) {
       preferred_language,
       interview_goals,
       target_companies,
+      resume_url,
+      resume_filename,
+      resume_parsed_at,
+      resume_data,
     } = body;
 
     if (!id) {
@@ -56,6 +60,10 @@ export async function POST(request: NextRequest) {
       preferred_language,
       interview_goals,
       target_companies,
+      resume_url,
+      resume_filename,
+      resume_parsed_at,
+      resume_data,
     });
 
     return NextResponse.json({ success: true, user: updatedUser });
@@ -83,6 +91,10 @@ export async function PATCH(request: NextRequest) {
       preferred_language,
       interview_goals,
       target_companies,
+      resume_url,
+      resume_filename,
+      resume_parsed_at,
+      resume_data,
     } = body;
 
     if (!id) {
@@ -100,6 +112,10 @@ export async function PATCH(request: NextRequest) {
       preferred_language,
       interview_goals,
       target_companies,
+      resume_url,
+      resume_filename,
+      resume_parsed_at,
+      resume_data,
     });
 
     return NextResponse.json({ success: true, user: updatedUser });

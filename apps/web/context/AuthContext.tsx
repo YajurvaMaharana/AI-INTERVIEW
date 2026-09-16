@@ -26,6 +26,10 @@ export interface NormalizedUser {
   preferred_language?: string;
   interview_goals?: string[] | string;
   target_companies?: string[];
+  resume_url?: string | null;
+  resume_filename?: string | null;
+  resume_parsed_at?: string | null;
+  resume_data?: any | null;
   user_metadata?: {
     display_name?: string;
     full_name?: string;
@@ -38,6 +42,10 @@ export interface NormalizedUser {
     preferred_language?: string;
     interview_goals?: string[] | string;
     target_companies?: string[];
+    resume_url?: string | null;
+    resume_filename?: string | null;
+    resume_parsed_at?: string | null;
+    resume_data?: any | null;
     [key: string]: any;
   };
   [key: string]: any;
@@ -67,6 +75,10 @@ export interface AuthContextType {
     preferred_language?: string;
     interview_goals?: string[] | string;
     target_companies?: string[];
+    resume_url?: string | null;
+    resume_filename?: string | null;
+    resume_parsed_at?: string | null;
+    resume_data?: any | null;
   }) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
 }
@@ -221,6 +233,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           preferred_language: data.preferred_language,
           interview_goals: data.interview_goals,
           target_companies: data.target_companies,
+          resume_url: data.resume_url,
+          resume_filename: data.resume_filename,
+          resume_parsed_at: data.resume_parsed_at,
+          resume_data: data.resume_data,
           user_metadata: {
             ...(currentSessionUser?.user_metadata || {}),
             display_name: data.display_name,
@@ -234,6 +250,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             preferred_language: data.preferred_language,
             interview_goals: data.interview_goals,
             target_companies: data.target_companies,
+            resume_url: data.resume_url,
+            resume_filename: data.resume_filename,
+            resume_parsed_at: data.resume_parsed_at,
+            resume_data: data.resume_data,
           },
         };
         setUser(mergedUser);
@@ -269,6 +289,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       preferred_language?: string;
       interview_goals?: string[] | string;
       target_companies?: string[];
+      resume_url?: string | null;
+      resume_filename?: string | null;
+      resume_parsed_at?: string | null;
+      resume_data?: any | null;
     }): Promise<boolean> => {
       if (!user?.id) return false;
 
@@ -285,6 +309,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const newPrefLanguage = updates.preferred_language !== undefined ? updates.preferred_language : u.preferred_language || null;
       const newGoals = updates.interview_goals !== undefined ? updates.interview_goals : u.interview_goals || null;
       const newTargetCompanies = updates.target_companies !== undefined ? updates.target_companies : u.target_companies || null;
+      const newResumeUrl = updates.resume_url !== undefined ? updates.resume_url : (u.resume_url || null);
+      const newResumeFilename = updates.resume_filename !== undefined ? updates.resume_filename : (u.resume_filename || null);
+      const newResumeParsedAt = updates.resume_parsed_at !== undefined ? updates.resume_parsed_at : (u.resume_parsed_at || null);
+      const newResumeData = updates.resume_data !== undefined ? updates.resume_data : (u.resume_data || null);
 
       const updatedUserPayload: NormalizedUser = {
         ...user,
@@ -300,6 +328,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         preferred_language: newPrefLanguage || undefined,
         interview_goals: newGoals || undefined,
         target_companies: newTargetCompanies || undefined,
+        resume_url: newResumeUrl,
+        resume_filename: newResumeFilename,
+        resume_parsed_at: newResumeParsedAt,
+        resume_data: newResumeData,
         user_metadata: {
           ...(user.user_metadata || {}),
           display_name: newDisplayName,
@@ -313,6 +345,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           preferred_language: newPrefLanguage || undefined,
           interview_goals: newGoals || undefined,
           target_companies: newTargetCompanies || undefined,
+          resume_url: newResumeUrl,
+          resume_filename: newResumeFilename,
+          resume_parsed_at: newResumeParsedAt,
+          resume_data: newResumeData,
         },
       };
 
@@ -345,6 +381,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (newPrefLanguage) dbPayload.preferred_language = newPrefLanguage;
         if (newGoals) dbPayload.interview_goals = newGoals;
         if (newTargetCompanies) dbPayload.target_companies = newTargetCompanies;
+        if (newResumeUrl !== undefined) dbPayload.resume_url = newResumeUrl;
+        if (newResumeFilename !== undefined) dbPayload.resume_filename = newResumeFilename;
+        if (newResumeParsedAt !== undefined) dbPayload.resume_parsed_at = newResumeParsedAt;
+        if (newResumeData !== undefined) dbPayload.resume_data = newResumeData;
 
         await Promise.allSettled([
           supabase.from("users").upsert(dbPayload, { onConflict: "id" }),
@@ -361,6 +401,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               preferred_language: newPrefLanguage,
               interview_goals: newGoals,
               target_companies: newTargetCompanies,
+              resume_url: newResumeUrl,
+              resume_filename: newResumeFilename,
+              resume_parsed_at: newResumeParsedAt,
+              resume_data: newResumeData,
             },
           }),
           fetch("/api/user/profile", {
@@ -379,6 +423,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               preferred_language: newPrefLanguage,
               interview_goals: newGoals,
               target_companies: newTargetCompanies,
+              resume_url: newResumeUrl,
+              resume_filename: newResumeFilename,
+              resume_parsed_at: newResumeParsedAt,
+              resume_data: newResumeData,
             }),
           }),
         ]);

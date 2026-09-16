@@ -12,8 +12,10 @@ import {
   truncateContext,
 } from './context.service';
 import type { ChatMessage, PromptVariables } from './context.service';
-import type { InterviewType, Difficulty } from '../../types/database.types';
-import { getSessionById } from '../db.service';
+import type { InterviewType, Difficulty, JobDescriptionParsedData } from '../../types/database.types';
+import { getSessionById, getUserById } from '../db.service';
+import { buildResumePromptGrounding } from '../resume-parser.service';
+import { buildJDPromptCalibration } from '../jd-parser.service';
 import {
   getOrCreateSessionTelemetry,
   evaluateCandidateResponse,
@@ -51,7 +53,7 @@ let cachedGenAI: GoogleGenAI | null = null;
 
 function getGeminiClient(): { client: GoogleGenAI; modelName: string } {
   const apiKey = process.env['GEMINI_API_KEY'];
-  const modelName = process.env['GEMINI_MODEL'] ?? 'gemini-2.5-flash';
+  const modelName = process.env['GEMINI_MODEL'] ?? 'gemini-3.8-flash';
 
   if (!apiKey) {
     throw new AIServiceError(
@@ -96,10 +98,20 @@ function buildSystemPrompt(
   role: string,
   difficulty: string,
   adaptivePromptContext?: string,
+  resumeGrounding?: string,
+  jdCalibration?: string,
 ): string {
   const template = getSystemPromptTemplate(type);
   const variables: PromptVariables = { role, difficulty };
-  const basePrompt = injectPromptVariables(template, variables);
+  let basePrompt = injectPromptVariables(template, variables);
+
+  if (jdCalibration) {
+    basePrompt = `${basePrompt}\n\n${jdCalibration}`;
+  }
+
+  if (resumeGrounding) {
+    basePrompt = `${basePrompt}\n\n${resumeGrounding}`;
+  }
 
   if (adaptivePromptContext) {
     return `${basePrompt}\n\n${adaptivePromptContext}`;
@@ -160,13 +172,35 @@ export async function generateOpeningQuestion(
   role: string,
   difficulty: Difficulty,
   sessionId?: string,
+  jdDataOverride?: JobDescriptionParsedData | null,
 ): Promise<string> {
+  let resumeGrounding = '';
+  let jdCalibration = '';
+
+  if (jdDataOverride) {
+    jdCalibration = buildJDPromptCalibration(jdDataOverride);
+  }
+
   if (sessionId) {
     getOrCreateSessionTelemetry(sessionId, type, difficulty);
+    try {
+      const session = await getSessionById(sessionId);
+      if (session?.jd_data && !jdCalibration) {
+        jdCalibration = buildJDPromptCalibration(session.jd_data);
+      }
+      if (session?.user_id) {
+        const user = await getUserById(session.user_id);
+        if (user?.resume_data) {
+          resumeGrounding = buildResumePromptGrounding(user.resume_data);
+        }
+      }
+    } catch {
+      // Ignore background grounding fetch error
+    }
   }
 
   try {
-    const systemPrompt = buildSystemPrompt(type, role, difficulty);
+    const systemPrompt = buildSystemPrompt(type, role, difficulty, undefined, resumeGrounding, jdCalibration);
 
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
@@ -199,6 +233,28 @@ export async function generateNextAdaptiveResponse(
     throw new Error(`Session "${sessionId}" not found`);
   }
 
+  // Look up candidate resume for personalized grounding & JD calibration
+  let resumeGrounding = '';
+  let jdCalibration = '';
+
+  if (session.jd_data) {
+    jdCalibration = buildJDPromptCalibration(session.jd_data);
+  }
+
+  if (session.user_id) {
+    try {
+      const user = await getUserById(session.user_id);
+      if (user?.resume_data) {
+        resumeGrounding = buildResumePromptGrounding(user.resume_data);
+      }
+      if (!jdCalibration && user?.saved_jd_data) {
+        jdCalibration = buildJDPromptCalibration(user.saved_jd_data);
+      }
+    } catch {
+      // Ignore background fetch error
+    }
+  }
+
   // 1. Retrieve current session telemetry
   const currentTelemetry = getOrCreateSessionTelemetry(
     sessionId,
@@ -219,13 +275,15 @@ export async function generateNextAdaptiveResponse(
     evaluation,
   );
 
-  // 4. Construct Dynamic Prompt with Adaptive Matrix & Branching Instructions
+  // 4. Construct Dynamic Prompt with Adaptive Matrix, Branching Instructions, Resume Grounding & JD Calibration
   const adaptivePromptContext = buildAdaptivePromptContext(updatedTelemetry);
   const systemPrompt = buildSystemPrompt(
     session.type,
     session.role,
     updatedTelemetry.currentDifficultyTier,
     adaptivePromptContext,
+    resumeGrounding,
+    jdCalibration,
   );
 
   let responseText = '';

@@ -20,6 +20,8 @@ import { InterviewInput } from "@/components/interview/InterviewInput";
 import { Button } from "@/components/ui/button";
 import { AdaptiveTelemetryHUD } from "@/components/interview/AdaptiveTelemetryHUD";
 import type { SessionAdaptiveTelemetry } from "@/lib/services/ai-engine/adaptive-engine.service";
+import type { JobDescriptionParsedData } from "@/lib/types/database.types";
+import { Target } from "lucide-react";
 
 interface InterviewResponse {
   message: string;
@@ -33,6 +35,7 @@ interface SessionData {
   difficulty: string;
   type: string;
   status: string;
+  jd_data?: JobDescriptionParsedData | null;
 }
 
 export default function InterviewPage() {
@@ -253,13 +256,30 @@ export default function InterviewPage() {
         aria-label="Interview Conversation"
       >
         <div className="mx-auto max-w-4xl space-y-4">
-          {/* Session Banner */}
-          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-[#151922]/80 p-3 text-center text-xs text-slate-600 dark:text-slate-400 shadow-2xs">
-            <p className="flex items-center justify-center gap-1.5 font-medium">
-              <Clock className="h-3.5 w-3.5 text-[#E8602E]" />
-              Real-time adaptive difficulty is active. Answers are scored live across concurrency, system design, and STAR framework dimensions.
-            </p>
-          </div>
+          {/* Session & JD Grounding Banner */}
+          {session?.jd_data ? (
+            <div className="rounded-2xl border border-[#FDBA74]/80 dark:border-[#EA580C]/40 bg-[#FFF7ED]/90 dark:bg-[#2A1D17]/80 p-3.5 text-xs text-[#9A3412] dark:text-[#FDBA74] shadow-2xs space-y-1.5">
+              <div className="flex items-center justify-between font-bold">
+                <div className="flex items-center gap-1.5">
+                  <Target className="h-4 w-4 text-[#E8602E]" />
+                  <span>JD Calibrated: {session.jd_data.job_title} {session.jd_data.company_name ? `(${session.jd_data.company_name})` : ""}</span>
+                </div>
+                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-[#E8602E] text-white">
+                  {session.jd_data.seniority_level}
+                </span>
+              </div>
+              <p className="text-[11px] opacity-90 leading-relaxed">
+                Questions are strictly grounded in target criteria: {session.jd_data.required_skills?.slice(0, 5).join(", ")}.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-[#151922]/80 p-3 text-center text-xs text-slate-600 dark:text-slate-400 shadow-2xs">
+              <p className="flex items-center justify-center gap-1.5 font-medium">
+                <Clock className="h-3.5 w-3.5 text-[#E8602E]" />
+                Real-time adaptive difficulty is active. Answers are scored live across concurrency, system design, and STAR framework dimensions.
+              </p>
+            </div>
+          )}
 
           {/* Render All Chat Messages */}
           {messages.map((msg, index) => (

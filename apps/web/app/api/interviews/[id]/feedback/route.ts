@@ -7,6 +7,7 @@ import {
   updateSession,
 } from '@/lib/services/db.service';
 import { GoogleGenAI } from '@google/genai';
+import type { JobDescriptionParsedData } from '@/lib/types/database.types';
 
 interface FeedbackScoreCategory {
   label: string;
@@ -26,16 +27,17 @@ async function generateEvaluationReport(
   role: string,
   difficulty: string,
   type: string,
-  messages: Array<{ sender_role: string; content: string }>
+  messages: Array<{ sender_role: string; content: string }>,
+  jdData?: JobDescriptionParsedData | null,
 ): Promise<FeedbackPayload> {
   const apiKey = process.env.GEMINI_API_KEY;
-  const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
   const userAnswers = messages.filter((m) => m.sender_role === 'user');
   if (userAnswers.length === 0) {
     return {
       overall_score: 70,
-      summary: `Initial practice session for ${role}. No candidate responses were recorded before concluding. Practice answering questions out loud using the STAR method for behavioral roles or explaining architectural trade-offs for technical interviews.`,
+      summary: `Initial practice session for ${role}${jdData?.company_name ? ` at ${jdData.company_name}` : ''}. No candidate responses were recorded before concluding. Practice answering questions out loud using the STAR method for behavioral roles or explaining architectural trade-offs for technical interviews.`,
       categories: [
         { label: 'Technical Proficiency', score: 70, comment: 'Session concluded before detailed technical questions were answered.' },
         { label: 'Communication & Clarity', score: 70, comment: 'Prepare clear, structured responses for next session.' },
@@ -52,15 +54,28 @@ async function generateEvaluationReport(
   if (apiKey) {
     try {
       const client = new GoogleGenAI({ apiKey });
-      const prompt = `You are a Principal Engineering and HR Director conducting a post-interview evaluation debrief for a candidate who interviewed for the "${role}" (${difficulty} difficulty, ${type} interview).
+      let jdContext = '';
+      if (jdData) {
+        jdContext = `
+Target Job Description Specifications:
+- Target Role: ${jdData.job_title} ${jdData.company_name ? `(${jdData.company_name})` : ''}
+- Seniority: ${jdData.seniority_level}
+- Required Skills: ${jdData.required_skills?.join(', ') || 'N/A'}
+- Critical Keywords: ${jdData.critical_keywords?.join(', ') || 'N/A'}
+- Core Responsibilities: ${jdData.core_responsibilities?.slice(0, 3).join('; ') || 'N/A'}
+- Key Evaluation Focus: ${jdData.evaluation_rubric_focus?.join('; ') || 'N/A'}
+`;
+      }
 
+      const prompt = `You are a Principal Engineering and HR Director conducting a post-interview evaluation debrief for a candidate who interviewed for the "${role}" (${difficulty} difficulty, ${type} interview).
+${jdContext}
 Here is the conversation transcript:
 ${messages.map((m) => `[${m.sender_role.toUpperCase()}]: ${m.content}`).join('\n\n')}
 
 Analyze the candidate's answers based on:
-1. Technical Proficiency & Accuracy
+1. Technical Proficiency & Accuracy (benchmarked against the target JD requirements and skills if provided)
 2. Communication & Clarity (STAR method, structure)
-3. Code Quality / System Design Trade-offs & Scalability
+3. Code Quality / System Design Trade-offs & Scalability (aligned with the seniority level: ${jdData?.seniority_level || difficulty})
 4. Actionable Improvements (2-3 specific, high-impact areas)
 
 Return ONLY a valid JSON object matching this exact TypeScript structure with no markdown codeblocks:
@@ -68,7 +83,7 @@ Return ONLY a valid JSON object matching this exact TypeScript structure with no
   "overall_score": 82,
   "summary": "Executive summary of performance...",
   "categories": [
-    { "label": "Technical Proficiency", "score": 85, "comment": "Assessment..." },
+    { "label": "Technical Proficiency", "score": 85, "comment": "Assessment against required skills..." },
     { "label": "Communication & Clarity", "score": 80, "comment": "Assessment..." },
     { "label": "Problem Solving & Architecture", "score": 82, "comment": "Assessment..." }
   ],
@@ -179,7 +194,8 @@ export async function POST(
       session.role,
       session.difficulty,
       session.type,
-      messages
+      messages,
+      session.jd_data
     );
 
     // Save feedback report to Supabase feedback_reports table

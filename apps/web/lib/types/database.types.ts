@@ -15,6 +15,85 @@ export type SessionStatus = 'in_progress' | 'completed' | 'cancelled';
 export type SenderRole = 'user' | 'ai';
 
 // ---------------------------------------------------------------------------
+// Resume & Grounding types
+// ---------------------------------------------------------------------------
+
+export interface ResumeProject {
+  name: string;
+  role?: string;
+  description: string;
+  technologies: string[];
+  metrics_and_impact: string[];
+  github_or_link?: string;
+}
+
+export interface ResumeExperience {
+  company: string;
+  role: string;
+  duration?: string;
+  location?: string;
+  responsibilities: string[];
+  achievements: string[];
+  quantifiable_metrics: string[];
+  technologies: string[];
+}
+
+export interface ResumeEducation {
+  institution: string;
+  degree: string;
+  field_of_study?: string;
+  graduation_year?: string;
+  gpa_or_honors?: string;
+}
+
+export interface ResumeSkills {
+  languages: string[];
+  frameworks: string[];
+  databases: string[];
+  cloud_and_devops: string[];
+  tools_and_architecture: string[];
+}
+
+export interface ResumeParsedData {
+  full_name?: string;
+  headline?: string;
+  summary?: string;
+  contact_info?: {
+    email?: string;
+    phone?: string;
+    location?: string;
+    linkedin?: string;
+    github?: string;
+    portfolio?: string;
+  };
+  skills: ResumeSkills;
+  experiences: ResumeExperience[];
+  projects: ResumeProject[];
+  education: ResumeEducation[];
+  certifications?: string[];
+  key_achievements?: string[];
+  quantifiable_highlights?: string[];
+  grounding_summary?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Job Description (JD) & Role Calibration types
+// ---------------------------------------------------------------------------
+
+export interface JobDescriptionParsedData {
+  job_title: string;
+  company_name?: string;
+  seniority_level: 'Junior' | 'Mid' | 'Senior' | 'Staff/Principal' | 'Lead/Manager' | string;
+  required_skills: string[];
+  preferred_skills: string[];
+  core_responsibilities: string[];
+  critical_keywords: string[];
+  domain_or_industry?: string;
+  evaluation_rubric_focus: string[];
+  calibration_summary: string;
+}
+
+// ---------------------------------------------------------------------------
 // Row types (what you SELECT back from the database)
 // ---------------------------------------------------------------------------
 
@@ -31,6 +110,11 @@ export interface User {
   preferred_language?: string | null;
   interview_goals?: string[] | string | null;
   target_companies?: string[] | null;
+  resume_url?: string | null;
+  resume_filename?: string | null;
+  resume_parsed_at?: string | null;
+  resume_data?: ResumeParsedData | null;
+  saved_jd_data?: JobDescriptionParsedData | null;
   created_at: string;
   updated_at: string;
 }
@@ -42,6 +126,8 @@ export interface InterviewSession {
   role: string;
   difficulty: Difficulty;
   status: SessionStatus;
+  jd_data?: JobDescriptionParsedData | null;
+  jd_raw_text?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -82,6 +168,11 @@ export interface UserInsert {
   preferred_language?: string | null;
   interview_goals?: string[] | string | null;
   target_companies?: string[] | null;
+  resume_url?: string | null;
+  resume_filename?: string | null;
+  resume_parsed_at?: string | null;
+  resume_data?: ResumeParsedData | null;
+  saved_jd_data?: JobDescriptionParsedData | null;
 }
 
 export interface InterviewSessionInsert {
@@ -90,6 +181,8 @@ export interface InterviewSessionInsert {
   role?: string;
   difficulty?: Difficulty;
   status?: SessionStatus;
+  jd_data?: JobDescriptionParsedData | null;
+  jd_raw_text?: string | null;
 }
 
 export interface InterviewMessageInsert {
@@ -122,6 +215,11 @@ export interface UserUpdate {
   preferred_language?: string | null;
   interview_goals?: string[] | string | null;
   target_companies?: string[] | null;
+  resume_url?: string | null;
+  resume_filename?: string | null;
+  resume_parsed_at?: string | null;
+  resume_data?: ResumeParsedData | null;
+  saved_jd_data?: JobDescriptionParsedData | null;
 }
 
 export interface InterviewSessionUpdate {
@@ -129,6 +227,8 @@ export interface InterviewSessionUpdate {
   role?: string;
   difficulty?: Difficulty;
   status?: SessionStatus;
+  jd_data?: JobDescriptionParsedData | null;
+  jd_raw_text?: string | null;
 }
 
 export interface FeedbackReportUpdate {
