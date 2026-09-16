@@ -7,7 +7,19 @@ import type { InterviewType, Difficulty } from '@/lib/types/database.types';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { type, role, difficulty, jdData, jdRawText } = body;
+    const {
+      type,
+      role,
+      difficulty,
+      persona,
+      duration,
+      targetDuration,
+      language,
+      practiceMode,
+      modality,
+      jdData,
+      jdRawText,
+    } = body;
 
     const missing: string[] = [];
     if (!type) missing.push('type');
@@ -22,10 +34,14 @@ export async function POST(req: Request) {
     }
 
     // Normalize interview type to database schema
-    const normalizedType: InterviewType =
-      type.toLowerCase() === 'hr' || type.toLowerCase() === 'behavioral'
-        ? 'behavioral'
-        : 'technical';
+    let normalizedType: InterviewType = 'technical';
+    const rawType = (type || '').toLowerCase();
+    if (rawType === 'hr' || rawType === 'behavioral') {
+      normalizedType = 'behavioral';
+    } else {
+      normalizedType = 'technical';
+    }
+
     const normalizedDifficulty: Difficulty =
       difficulty.toLowerCase() as Difficulty;
 
@@ -48,6 +64,11 @@ export async function POST(req: Request) {
       role: role.trim(),
       difficulty: normalizedDifficulty,
       status: 'in_progress',
+      persona: persona || 'tech-grinder',
+      target_duration: Number(duration || targetDuration || 30),
+      language: language || 'English',
+      practice_mode: practiceMode || 'standard',
+      modality: modality || 'voice',
       jd_data: jdData || null,
       jd_raw_text: jdRawText || null,
     });
@@ -56,7 +77,7 @@ export async function POST(req: Request) {
     let openingQuestion = '';
     try {
       openingQuestion = await generateOpeningQuestion(
-        normalizedType,
+        type, // Pass specific type (e.g. "System Design", "Technical", "Behavioral", "Mixed")
         role.trim(),
         normalizedDifficulty,
         session.id,

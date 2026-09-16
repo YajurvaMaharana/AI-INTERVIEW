@@ -141,7 +141,14 @@ export default function AscendXNavbar({
             <nav className="hidden xl:flex items-center gap-1 2xl:gap-1.5 bg-slate-100/70 dark:bg-[#1C2230]/70 p-1 rounded-full border border-slate-200/60 dark:border-slate-800">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive =
+                  item.href === "/dashboard"
+                    ? pathname === "/dashboard"
+                    : item.href === "/interview/new"
+                    ? pathname.startsWith("/interview") || pathname.startsWith("/mock-interviews")
+                    : item.href === "/resume-jd-grounding"
+                    ? pathname.startsWith("/resume-jd-grounding")
+                    : pathname === item.href;
 
                 return (
                   <button

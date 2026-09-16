@@ -119,6 +119,42 @@ export function SimulationBossAvatar({ className = "w-12 h-12" }: { className?: 
   );
 }
 
+export function SupportiveMentorAvatar({ className = "w-12 h-12" }: { className?: string }) {
+  return (
+    <div className={`relative rounded-full overflow-hidden bg-[#E6F4EA] dark:bg-[#132A1C] flex items-center justify-center shrink-0 ${className}`}>
+      <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="50" fill="#EAF7EE" />
+        {/* Hair back */}
+        <ellipse cx="50" cy="44" rx="28" ry="26" fill="#2E4A3E" />
+        {/* Face */}
+        <ellipse cx="50" cy="46" rx="20" ry="21" fill="#FCE2D2" />
+        {/* Stylish wavy dark-teal hair */}
+        <path d="M24 42 C 26 22, 74 22, 76 42 C 70 30, 60 25, 50 26 C 40 25, 30 30, 24 42 Z" fill="#1B382B" />
+        <path d="M22 42 C 22 58, 28 68, 34 72 C 30 62, 30 48, 32 40 Z" fill="#2E4A3E" />
+        <path d="M78 42 C 78 58, 72 68, 66 72 C 70 62, 70 48, 68 40 Z" fill="#2E4A3E" />
+        {/* Eyebrows */}
+        <path d="M36 40 Q 42 37 46 40" stroke="#1B382B" strokeWidth="2" strokeLinecap="round" />
+        <path d="M54 40 Q 58 37 64 40" stroke="#1B382B" strokeWidth="2" strokeLinecap="round" />
+        {/* Warm patient eyes */}
+        <ellipse cx="41" cy="46" rx="2.5" ry="3" fill="#0F172A" />
+        <ellipse cx="59" cy="46" rx="2.5" ry="3" fill="#0F172A" />
+        <circle cx="42" cy="45" r="0.8" fill="#FFFFFF" />
+        <circle cx="60" cy="45" r="0.8" fill="#FFFFFF" />
+        {/* Modern wireframe glasses */}
+        <circle cx="41" cy="46" r="7" stroke="#10B981" strokeWidth="1.5" fill="rgba(16,185,129,0.08)" />
+        <circle cx="59" cy="46" r="7" stroke="#10B981" strokeWidth="1.5" fill="rgba(16,185,129,0.08)" />
+        <line x1="48" y1="46" x2="52" y2="46" stroke="#10B981" strokeWidth="1.5" />
+        {/* Gentle smiling mouth */}
+        <path d="M44 58 Q 50 64 56 58" stroke="#A84C32" strokeWidth="2" strokeLinecap="round" fill="none" />
+        {/* Mentorship teal cardigan */}
+        <rect x="44" y="65" width="12" height="12" fill="#F0C7AF" />
+        <path d="M20 100 C 22 75, 34 71, 50 71 C 66 71, 78 75, 80 100 Z" fill="#059669" />
+        <polygon points="50,86 42,71 58,71" fill="#FFFFFF" />
+      </svg>
+    </div>
+  );
+}
+
 export function CandidateProfileAvatar({ className = "w-9 h-9" }: { className?: string }) {
   return (
     <div className={`relative rounded-full overflow-hidden border-2 border-white shadow-xs flex items-center justify-center shrink-0 ${className}`}>

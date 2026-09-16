@@ -126,6 +126,11 @@ export interface InterviewSession {
   role: string;
   difficulty: Difficulty;
   status: SessionStatus;
+  persona?: string | null;
+  target_duration?: number | null;
+  language?: string | null;
+  practice_mode?: string | null;
+  modality?: string | null;
   jd_data?: JobDescriptionParsedData | null;
   jd_raw_text?: string | null;
   created_at: string;
@@ -181,6 +186,11 @@ export interface InterviewSessionInsert {
   role?: string;
   difficulty?: Difficulty;
   status?: SessionStatus;
+  persona?: string | null;
+  target_duration?: number | null;
+  language?: string | null;
+  practice_mode?: string | null;
+  modality?: string | null;
   jd_data?: JobDescriptionParsedData | null;
   jd_raw_text?: string | null;
 }
@@ -227,6 +237,11 @@ export interface InterviewSessionUpdate {
   role?: string;
   difficulty?: Difficulty;
   status?: SessionStatus;
+  persona?: string | null;
+  target_duration?: number | null;
+  language?: string | null;
+  practice_mode?: string | null;
+  modality?: string | null;
   jd_data?: JobDescriptionParsedData | null;
   jd_raw_text?: string | null;
 }

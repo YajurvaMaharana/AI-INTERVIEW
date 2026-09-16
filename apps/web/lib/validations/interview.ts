@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const interviewSetupSchema = z.object({
-  type: z.enum(["Technical", "HR"], {
-    required_error: "Please select an interview type",
+  type: z.enum(["Technical", "HR", "System Design", "Mixed"], {
+    required_error: "Please select an interview format",
   }),
   role: z
     .string()
@@ -11,6 +11,15 @@ export const interviewSetupSchema = z.object({
   difficulty: z.enum(["Easy", "Medium", "Hard"], {
     required_error: "Please select a difficulty level",
   }),
+  persona: z
+    .enum(["tech-grinder", "hr-partner", "simulation-boss", "supportive-mentor"])
+    .default("tech-grinder"),
+  duration: z.coerce.number().min(5).max(120).default(30),
+  language: z.string().min(2).default("English"),
+  practiceMode: z
+    .enum(["standard", "stress_test", "coaching", "simulation_day"])
+    .default("standard"),
+  modality: z.enum(["voice", "text"]).default("voice"),
 });
 
 export type InterviewSetupValues = z.infer<typeof interviewSetupSchema>;
@@ -31,6 +40,6 @@ export async function mockCreateInterview(
   await new Promise((resolve) => setTimeout(resolve, 1500));
   return {
     sessionId: `mock-${Date.now()}-${data.type.toLowerCase()}`,
-    message: `${data.type} interview session created for ${data.role} (${data.difficulty})`,
+    message: `${data.type} interview session created for ${data.role} (${data.difficulty}) with ${data.persona} in ${data.language}`,
   };
 }

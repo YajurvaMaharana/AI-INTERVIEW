@@ -7,6 +7,8 @@ import { GoogleGenAI } from '@google/genai';
 import { resolveGeminiModel, generateWithModelFallback } from '@/lib/utils/gemini-model';
 import { TECHNICAL_SYSTEM_PROMPT } from './prompts/technical.prompt';
 import { HR_SYSTEM_PROMPT } from './prompts/hr.prompt';
+import { SYSTEM_DESIGN_SYSTEM_PROMPT } from './prompts/system-design.prompt';
+import { MIXED_SYSTEM_PROMPT } from './prompts/mixed.prompt';
 import {
   buildMessageHistory,
   injectPromptVariables,
@@ -84,32 +86,138 @@ const MAX_CONTEXT_MESSAGES = 40;
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function getSystemPromptTemplate(type: InterviewType): string {
-  switch (type.toLowerCase()) {
-    case 'technical':
-      return TECHNICAL_SYSTEM_PROMPT;
-    case 'behavioral':
-    case 'hr':
-      return HR_SYSTEM_PROMPT;
+function getSystemPromptTemplate(type: string): string {
+  const normalized = (type || '').toLowerCase().replace(/[-_]/g, ' ');
+  if (normalized.includes('system design') || normalized.includes('architecture')) {
+    return SYSTEM_DESIGN_SYSTEM_PROMPT;
+  }
+  if (normalized.includes('behavioral') || normalized.includes('hr')) {
+    return HR_SYSTEM_PROMPT;
+  }
+  if (normalized.includes('mixed') || normalized.includes('full loop')) {
+    return MIXED_SYSTEM_PROMPT;
+  }
+  return TECHNICAL_SYSTEM_PROMPT;
+}
+
+function buildPersonaGrounding(persona?: string | null): string {
+  switch (persona) {
+    case 'tech-grinder':
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+ACTIVE PERSONA: Alex Vance — Strict Tech Grinder
+═══════════════════════════════════════════════════════════════════════════════
+• Character tone: Highly rigorous, fast-paced, latency & complexity conscious, uncompromising on precision.
+• Probing style: Immediately challenge hand-waving or vague approximations. Demand concrete Big-O analysis, memory allocations, concurrency constraints, and edge case handling.
+• Direct opening: "I'm Alex Vance. Let's dive straight into the technical architecture and algorithmic depth."`.trim();
+
+    case 'hr-partner':
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+ACTIVE PERSONA: Sarah Jenkins — Warm HR Partner
+═══════════════════════════════════════════════════════════════════════════════
+• Character tone: Empathetic, psychologically safe, structured STAR framework coach.
+• Probing style: Probe for emotional intelligence, cross-functional collaboration, resolving difficult workplace conflict, stakeholder management, and ownership.
+• Direct opening: "Hi there! I'm Sarah Jenkins. I'm excited to learn more about your leadership journey and experiences."`.trim();
+
+    case 'simulation-boss':
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+ACTIVE PERSONA: Marcus Sterling — Simulation AI Boss
+═══════════════════════════════════════════════════════════════════════════════
+• Character tone: Seasoned Engineering VP & Director. Direct, outcome-driven, ROI & architecture focused.
+• Probing style: Probe engineering trade-offs, roadmap prioritization, cost vs scalability decisions, and executive clarity.
+• Direct opening: "Hello, I'm Marcus Sterling. Let's examine how your technical choices drive production reliability and business outcomes."`.trim();
+
+    case 'supportive-mentor':
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+ACTIVE PERSONA: Elena Rostova — Supportive Mentor
+═══════════════════════════════════════════════════════════════════════════════
+• Character tone: Pedagogical, encouraging, patient, constructive confidence-builder.
+• Probing style: Break complex questions down into digestible parts. If the candidate struggles, provide gentle conceptual hints to guide them forward.
+• Direct opening: "Welcome! I'm Elena Rostova. Let's work through this problem together and demonstrate your strongest thinking."`.trim();
+
     default:
-      throw new Error(
-        `Unsupported interview type "${type}". Only "technical" and "behavioral/hr" are supported.`,
-      );
+      return '';
   }
 }
 
+function buildPracticeModeGrounding(mode?: string | null): string {
+  switch (mode) {
+    case 'stress_test':
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+PRACTICE MODE: Stress Test & Interruption Calibration
+═══════════════════════════════════════════════════════════════════════════════
+• Introduce sudden constraint shifts, unexpected scale spikes, or edge cases.
+• Probe weak assumptions aggressively to test composure and adaptability.`.trim();
+
+    case 'coaching':
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+PRACTICE MODE: Guided Coaching & Real-time Hints
+═══════════════════════════════════════════════════════════════════════════════
+• Acknowledge great answers immediately with positive reinforcement.
+• If the candidate encounters ambiguity, provide subtle hints to keep momentum going.`.trim();
+
+    case 'simulation_day':
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+PRACTICE MODE: Real-World Day Simulation / Incident Triage
+═══════════════════════════════════════════════════════════════════════════════
+• Frame questions around real production scenarios (e.g., P0 outage triage, PR architectural review, legacy migration).`.trim();
+
+    default:
+      return '';
+  }
+}
+
+function buildSessionMetaGrounding(
+  language?: string | null,
+  duration?: number | null,
+  modality?: string | null
+): string {
+  const parts: string[] = [];
+  if (language && language.toLowerCase() !== 'english') {
+    parts.push(`CRITICAL LANGUAGE REQUIREMENT: You MUST conduct the entire interview fluently in ${language}. All questions, feedback, and greetings must be in ${language}.`);
+  }
+  if (duration) {
+    parts.push(`TARGET SESSION DURATION: ${duration} minutes. Pace your questioning accordingly.`);
+  }
+  if (modality === 'voice') {
+    parts.push(`INPUT/OUTPUT MODALITY: Voice-Active Mode. Keep your responses conversational, punchy, and natural for text-to-speech rendering (avoid oversized code dumps unless requested).`);
+  }
+  return parts.length > 0 ? `\n\n═══════════════════════════════════════════════════════════════════════════════\nSESSION CALIBRATION\n═══════════════════════════════════════════════════════════════════════════════\n${parts.join('\n')}` : '';
+}
+
 function buildSystemPrompt(
-  type: InterviewType,
+  type: string,
   role: string,
   difficulty: string,
   adaptivePromptContext?: string,
   resumeGrounding?: string,
   jdCalibration?: string,
   claimsGrounding?: string,
+  personaGrounding?: string,
+  practiceModeGrounding?: string,
+  metaGrounding?: string,
 ): string {
   const template = getSystemPromptTemplate(type);
   const variables: PromptVariables = { role, difficulty };
   let basePrompt = injectPromptVariables(template, variables);
+
+  if (personaGrounding) {
+    basePrompt = `${basePrompt}\n\n${personaGrounding}`;
+  }
+
+  if (practiceModeGrounding) {
+    basePrompt = `${basePrompt}\n\n${practiceModeGrounding}`;
+  }
+
+  if (metaGrounding) {
+    basePrompt = `${basePrompt}\n\n${metaGrounding}`;
+  }
 
   if (jdCalibration) {
     basePrompt = `${basePrompt}\n\n${jdCalibration}`;
@@ -185,7 +293,7 @@ async function callGeminiAPI(messages: ChatMessage[]): Promise<string> {
 // ---------------------------------------------------------------------------
 
 export async function generateOpeningQuestion(
-  type: InterviewType,
+  type: string,
   role: string,
   difficulty: Difficulty,
   sessionId?: string,
@@ -194,15 +302,23 @@ export async function generateOpeningQuestion(
   let resumeGrounding = '';
   let jdCalibration = '';
   let claimsGrounding = '';
+  let personaGrounding = '';
+  let practiceModeGrounding = '';
+  let metaGrounding = '';
 
   if (jdDataOverride) {
     jdCalibration = buildJDPromptCalibration(jdDataOverride);
   }
 
   if (sessionId) {
-    getOrCreateSessionTelemetry(sessionId, type, difficulty);
+    getOrCreateSessionTelemetry(sessionId, type as InterviewType, difficulty);
     try {
       const session = await getSessionById(sessionId);
+      if (session) {
+        personaGrounding = buildPersonaGrounding(session.persona);
+        practiceModeGrounding = buildPracticeModeGrounding(session.practice_mode);
+        metaGrounding = buildSessionMetaGrounding(session.language, session.target_duration, session.modality);
+      }
       if (session?.jd_data && !jdCalibration) {
         jdCalibration = buildJDPromptCalibration(session.jd_data);
       }
@@ -232,19 +348,27 @@ export async function generateOpeningQuestion(
       undefined,
       resumeGrounding,
       jdCalibration,
-      claimsGrounding
+      claimsGrounding,
+      personaGrounding,
+      practiceModeGrounding,
+      metaGrounding,
     );
 
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Start the ${difficulty} ${type} interview for the ${role} position. Introduce yourself briefly and ask the opening question.` },
+      { role: 'user', content: `Start the ${difficulty} ${type} interview for the ${role} position. Introduce yourself in character and ask your opening question.` },
     ];
 
     return await callGeminiAPI(messages);
   } catch (err: any) {
     console.warn('[interviewer] Fallback for opening question:', err?.message);
-    if (type.toLowerCase() === 'technical') {
+    const normalized = (type || '').toLowerCase();
+    if (normalized.includes('system design') || normalized.includes('architecture')) {
+      return `Welcome to your System Design interview for the ${role} position (${difficulty} level). Let's design a high-throughput, fault-tolerant distributed system. To start, how would you approach gathering requirements and defining latency budgets?`;
+    } else if (normalized.includes('technical')) {
       return `Welcome to your technical mock interview for the ${role} position (${difficulty} level). To kick off, could you briefly introduce yourself, explain a complex technical challenge you solved recently, and walk me through the key architectural trade-offs you made?`;
+    } else if (normalized.includes('mixed')) {
+      return `Hello and welcome to your Full-Loop interview for the ${role} position. Let's begin: Could you describe an impactful project where you made key architectural decisions while collaborating closely across product and engineering teams?`;
     } else {
       return `Hello and welcome! I am your interviewer for the ${role} position. Let's begin with a behavioral question using the STAR framework: Can you describe a challenging project or cross-functional disagreement you navigated in your recent work, and what specific actions you took to deliver results?`;
     }
@@ -271,6 +395,9 @@ export async function generateNextAdaptiveResponse(
   let resumeGrounding = '';
   let jdCalibration = '';
   let claimsGrounding = '';
+  const personaGrounding = buildPersonaGrounding(session.persona);
+  const practiceModeGrounding = buildPracticeModeGrounding(session.practice_mode);
+  const metaGrounding = buildSessionMetaGrounding(session.language, session.target_duration, session.modality);
 
   if (session.jd_data) {
     jdCalibration = buildJDPromptCalibration(session.jd_data);
@@ -317,7 +444,7 @@ export async function generateNextAdaptiveResponse(
     evaluation,
   );
 
-  // 4. Construct Dynamic Prompt with Adaptive Matrix, Branching Instructions, Resume Grounding, JD Calibration & Audited Claims
+  // 4. Construct Dynamic Prompt with Adaptive Matrix, Branching Instructions, Grounding, Persona & Mode
   const adaptivePromptContext = buildAdaptivePromptContext(updatedTelemetry);
   const systemPrompt = buildSystemPrompt(
     session.type,
@@ -326,7 +453,10 @@ export async function generateNextAdaptiveResponse(
     adaptivePromptContext,
     resumeGrounding,
     jdCalibration,
-    claimsGrounding
+    claimsGrounding,
+    personaGrounding,
+    practiceModeGrounding,
+    metaGrounding,
   );
 
   let responseText = '';
