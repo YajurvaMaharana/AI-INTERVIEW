@@ -4,6 +4,7 @@
 // ---------------------------------------------------------------------------
 
 import { GoogleGenAI } from '@google/genai';
+import { resolveGeminiModel } from '@/lib/utils/gemini-model';
 import { TECHNICAL_SYSTEM_PROMPT } from './prompts/technical.prompt';
 import { HR_SYSTEM_PROMPT } from './prompts/hr.prompt';
 import {
@@ -53,7 +54,7 @@ let cachedGenAI: GoogleGenAI | null = null;
 
 function getGeminiClient(): { client: GoogleGenAI; modelName: string } {
   const apiKey = process.env['GEMINI_API_KEY'];
-  const modelName = process.env['GEMINI_MODEL'] ?? 'gemini-3.8-flash';
+  const modelName = resolveGeminiModel();
 
   if (!apiKey) {
     throw new AIServiceError(
@@ -134,6 +135,13 @@ async function callGeminiAPI(messages: ChatMessage[]): Promise<string> {
       parts: [{ text: msg.content }],
     }));
 
+    if (contents.length === 0) {
+      contents.push({
+        role: 'user',
+        parts: [{ text: 'Please greet the candidate and ask the opening question to begin the interview.' }],
+      });
+    }
+
     const result = await client.models.generateContent({
       model: modelName,
       contents,
@@ -204,6 +212,7 @@ export async function generateOpeningQuestion(
 
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
+      { role: 'user', content: `Start the ${difficulty} ${type} interview for the ${role} position. Introduce yourself briefly and ask the opening question.` },
     ];
 
     return await callGeminiAPI(messages);

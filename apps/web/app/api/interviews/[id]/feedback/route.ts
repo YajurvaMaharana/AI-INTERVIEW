@@ -7,6 +7,7 @@ import {
   updateSession,
 } from '@/lib/services/db.service';
 import { GoogleGenAI } from '@google/genai';
+import { resolveGeminiModel } from '@/lib/utils/gemini-model';
 import type { JobDescriptionParsedData } from '@/lib/types/database.types';
 
 interface FeedbackScoreCategory {
@@ -31,7 +32,7 @@ async function generateEvaluationReport(
   jdData?: JobDescriptionParsedData | null,
 ): Promise<FeedbackPayload> {
   const apiKey = process.env.GEMINI_API_KEY;
-  const modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+  const modelName = resolveGeminiModel();
 
   const userAnswers = messages.filter((m) => m.sender_role === 'user');
   if (userAnswers.length === 0) {

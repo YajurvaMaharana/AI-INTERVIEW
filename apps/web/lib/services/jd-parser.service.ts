@@ -4,6 +4,7 @@
 // ---------------------------------------------------------------------------
 
 import { GoogleGenAI, Type } from '@google/genai';
+import { resolveGeminiModel } from '@/lib/utils/gemini-model';
 import type { JobDescriptionParsedData } from '../types/database.types';
 
 // ---------------------------------------------------------------------------
@@ -176,7 +177,7 @@ export async function parseJobDescription(
   input: { rawText?: string; fileBuffer?: Buffer; mimeType?: string; filename?: string }
 ): Promise<JobDescriptionParsedData> {
   const genAI = getGeminiInstance();
-  const modelName = process.env['GEMINI_MODEL'] ?? 'gemini-3.8-flash';
+  const modelName = resolveGeminiModel();
 
   const rawText = input.rawText || '';
 

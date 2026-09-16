@@ -4,6 +4,7 @@
 // ---------------------------------------------------------------------------
 
 import { GoogleGenAI, Type } from '@google/genai';
+import { resolveGeminiModel } from '@/lib/utils/gemini-model';
 import type { ResumeParsedData, ResumeProject, ResumeExperience, ResumeEducation, ResumeSkills } from '../types/database.types';
 import { getSupabaseAdminClient, syncUserToDatabase, getUserById } from './db.service';
 
@@ -178,7 +179,7 @@ export async function parseResumeWithGemini(
     return generateFallbackParsedResume(fileName);
   }
 
-  const modelName = process.env['GEMINI_MODEL'] ?? 'gemini-3.8-flash';
+  const modelName = resolveGeminiModel();
 
   const systemInstruction = `
 You are an expert Technical Recruiter and Staff Engineering Hiring Manager.
