@@ -27,7 +27,6 @@ import {
   Bot,
   User,
 } from "lucide-react";
-import AscendXNavbar from "@/components/layout/AscendXNavbar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -223,8 +222,6 @@ export default function FeedbackHubPage() {
 
   return (
     <div className="min-h-screen bg-[#ECEEF2] dark:bg-[#0B0F15] text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-300">
-      <AscendXNavbar />
-
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8 space-y-6">
         {/* Notification Toast */}
         {notification && (
