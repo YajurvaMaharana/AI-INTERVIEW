@@ -156,20 +156,45 @@ ACTIVE PERSONA: Dr. Viktor Cole — Skeptical Interrogator
 function buildPracticeModeGrounding(mode?: string | null): string {
   switch (mode) {
     case 'stress_test':
+    case 'pressure':
       return `
 ═══════════════════════════════════════════════════════════════════════════════
-PRACTICE MODE: Stress Test & Interruption Calibration
+PRACTICE MODE: Pressure Mode (Stress Test & Tough Pushback)
 ═══════════════════════════════════════════════════════════════════════════════
-• Introduce sudden constraint shifts, unexpected scale spikes, or edge cases.
-• Probe weak assumptions aggressively to test composure and adaptability.`.trim();
+• Introduce strict time limits, unexpected constraint shifts, and challenging pushback.
+• Aggressively probe weak assumptions, concurrency edge cases, and scalability bottlenecks to test candidate composure under fire.`.trim();
 
     case 'coaching':
       return `
 ═══════════════════════════════════════════════════════════════════════════════
-PRACTICE MODE: Guided Coaching & Real-time Hints
+PRACTICE MODE: Coaching Mode (Guided Interactive Hints)
 ═══════════════════════════════════════════════════════════════════════════════
-• Acknowledge great answers immediately with positive reinforcement.
-• If the candidate encounters ambiguity, provide subtle hints to keep momentum going.`.trim();
+• Acknowledge correct insights immediately with positive reinforcement.
+• Provide constructive architectural hints and guide the candidate step-by-step through complex trade-offs.`.trim();
+
+    case 'drill':
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+PRACTICE MODE: Drill Mode (Focused Weakness Repetition)
+═══════════════════════════════════════════════════════════════════════════════
+• Target recurring candidate weaknesses and architectural blind spots directly.
+• Run 3 consecutive deep-dive probes on the same core competency domain to ensure mastery.`.trim();
+
+    case 'rapid_fire':
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+PRACTICE MODE: Rapid-Fire Mode (High-Speed Conceptual Checks)
+═══════════════════════════════════════════════════════════════════════════════
+• Ask concise, fast-paced conceptual questions covering multiple distinct domains.
+• Require direct, punchy answers without long introductory preamble.`.trim();
+
+    case 'confidence':
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+PRACTICE MODE: Confidence Mode (Supportive Reinforcement)
+═══════════════════════════════════════════════════════════════════════════════
+• Maintain an uplifting, empowering tone that validates candidate strengths.
+• Frame challenges as growth opportunities and celebrate structured reasoning.`.trim();
 
     case 'simulation_day':
       return `
@@ -178,8 +203,14 @@ PRACTICE MODE: Real-World Day Simulation / Incident Triage
 ═══════════════════════════════════════════════════════════════════════════════
 • Frame questions around real production scenarios (e.g., P0 outage triage, PR architectural review, legacy migration).`.trim();
 
+    case 'standard':
+    case 'interview':
     default:
-      return '';
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+PRACTICE MODE: Full Simulated Assessment
+═══════════════════════════════════════════════════════════════════════════════
+• Conduct a balanced, comprehensive assessment mirroring a real industry hiring loop.`.trim();
   }
 }
 

@@ -15,6 +15,8 @@ import {
   Sliders,
   ShieldCheck,
   Zap,
+  Target,
+  Award,
   Mic,
   Laptop,
   Layers,
@@ -117,26 +119,38 @@ const PRACTICE_MODES = [
   {
     id: "standard" as const,
     title: "Realistic Interview",
-    description: "Standard industry pacing and real-world evaluation.",
+    description: "Standard industry pacing and full simulated hiring assessment.",
     icon: ShieldCheck,
-  },
-  {
-    id: "stress_test" as const,
-    title: "Stress Test Mode",
-    description: "Sudden constraint changes and aggressive deep probes.",
-    icon: Flame,
   },
   {
     id: "coaching" as const,
     title: "Guided Coaching",
-    description: "Interactive hints, instant validation, and scaffolding.",
+    description: "Interactive hints, scaffolding, and step-by-step mentoring.",
     icon: Compass,
   },
   {
-    id: "simulation_day" as const,
-    title: "Incident / Day In Life",
-    description: "Real production outages, PR reviews, and trade-offs.",
-    icon: Laptop,
+    id: "stress_test" as const,
+    title: "Pressure & Stress Test",
+    description: "Strict constraints, unexpected scale spikes, and tough pushback.",
+    icon: Flame,
+  },
+  {
+    id: "drill" as const,
+    title: "Weakness Drill Mode",
+    description: "Focused repetition and deep-dive probes on target domains.",
+    icon: Target,
+  },
+  {
+    id: "rapid_fire" as const,
+    title: "Rapid-Fire Checks",
+    description: "High-speed conceptual questions across multiple core topics.",
+    icon: Zap,
+  },
+  {
+    id: "confidence" as const,
+    title: "Confidence Booster",
+    description: "Supportive reinforcement and empowering mentoring tone.",
+    icon: Award,
   },
 ];
 
@@ -621,7 +635,7 @@ export default function SetupForm() {
                 <span>6. Practice Mode</span>
               </label>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {PRACTICE_MODES.map((mode) => {
                   const Icon = mode.icon;
                   const isSelected = selectedPracticeMode === mode.id;

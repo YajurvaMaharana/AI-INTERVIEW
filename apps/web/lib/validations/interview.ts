@@ -17,7 +17,7 @@ export const interviewSetupSchema = z.object({
   duration: z.coerce.number().min(5).max(120).default(30),
   language: z.string().min(2).default("English"),
   practiceMode: z
-    .enum(["standard", "stress_test", "coaching", "simulation_day"])
+    .enum(["standard", "stress_test", "coaching", "drill", "rapid_fire", "confidence", "simulation_day", "pressure", "interview"])
     .default("standard"),
   modality: z.enum(["voice", "text"]).default("voice"),
 });
