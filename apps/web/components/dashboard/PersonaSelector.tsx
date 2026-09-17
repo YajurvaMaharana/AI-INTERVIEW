@@ -7,9 +7,10 @@ import {
   HRPartnerAvatar,
   SimulationBossAvatar,
   SupportiveMentorAvatar,
+  SkepticalInterrogatorAvatar,
 } from "@/components/interview/PersonaAvatars";
 
-export type PersonaId = "tech-grinder" | "hr-partner" | "simulation-boss" | "supportive-mentor";
+export type PersonaId = "tech-grinder" | "hr-partner" | "simulation-boss" | "supportive-mentor" | "skeptical-interrogator";
 
 interface PersonaSelectorProps {
   selectedPersona?: PersonaId;
@@ -48,6 +49,14 @@ export default function PersonaSelector({
       description: "Focuses on leadership, cross-functional conflict, culture, and team empathy.",
     },
     {
+      id: "skeptical-interrogator" as PersonaId,
+      name: "Dr. Viktor Cole",
+      title: "Skeptical Interrogator",
+      avatar: <SkepticalInterrogatorAvatar className="w-11 h-11" />,
+      tagline: "Challenger & Proof-Driven",
+      description: "Relentlessly challenges assumptions, demands rigorous mathematical proofs, and tests failure boundaries.",
+    },
+    {
       id: "simulation-boss" as PersonaId,
       name: "Marcus Sterling",
       title: "Simulation AI Boss",
@@ -78,12 +87,12 @@ export default function PersonaSelector({
           </p>
         </div>
         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">
-          4 AI Personas
+          5 AI Personas
         </span>
       </div>
 
-      {/* 4 Personas Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+      {/* Personas Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
         {personas.map((p) => {
           const isSelected = currentSelected === p.id;
           return (

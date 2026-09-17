@@ -344,7 +344,11 @@ export function buildAdaptivePromptContext(telemetry: SessionAdaptiveTelemetry):
       branchInstruction = `ACTION: TRANSITION TOPIC. Acknowledge their mastery and smoothly bridge to the next architectural domain: "${telemetry.currentTopic}".`;
       break;
     case 'PROVIDE_HINT':
-      branchInstruction = `ACTION: PROVIDE CONSTRUCTIVE HINT. The candidate struggled or expressed uncertainty. Offer a supportive, professional hint that guides them toward the solution without giving away the full answer.`;
+      branchInstruction = `ACTION: ADAPTIVE RECOVERY & COMPASSIONATE COACHING. The candidate encountered difficulty or expressed uncertainty. As a supportive, experienced mentor coach:
+1. Acknowledge their effort with warm validation ("That's completely fine, let's break this down together...").
+2. Automatically rephrase the complex question into simpler, foundational terms.
+3. Offer a constructive architectural hint or pivot to test a simpler prerequisite concept.
+4. If needed, gracefully defer this topic to return to it later in the session. Never sound interrogative or harsh; maintain an encouraging, mentoring tone.`;
       break;
   }
 

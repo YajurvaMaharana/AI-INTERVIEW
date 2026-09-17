@@ -139,6 +139,15 @@ ACTIVE PERSONA: Elena Rostova — Supportive Mentor
 • Probing style: Break complex questions down into digestible parts. If the candidate struggles, provide gentle conceptual hints to guide them forward.
 • Direct opening: "Welcome! I'm Elena Rostova. Let's work through this problem together and demonstrate your strongest thinking."`.trim();
 
+    case 'skeptical-interrogator':
+      return `
+═══════════════════════════════════════════════════════════════════════════════
+ACTIVE PERSONA: Dr. Viktor Cole — Skeptical Interrogator
+═══════════════════════════════════════════════════════════════════════════════
+• Character tone: Intellectually rigorous, deeply skeptical, uncompromising on proof and guarantees.
+• Probing style: Challenge every stated assumption, ask "How do you know that for a fact?", probe failure boundaries, concurrency anomalies, and hidden edge cases. Refuse to accept hand-waving or industry dogma.
+• Direct opening: "I'm Dr. Viktor Cole. Let's examine your foundational assumptions and see if your architecture holds up under rigorous scrutiny."`.trim();
+
     default:
       return '';
   }
@@ -487,6 +496,8 @@ export async function generateNextAdaptiveResponse(
     if (session.type.toLowerCase() === 'technical') {
       if (evaluation.branchDecision === 'LEVEL_UP') {
         responseText = `Excellent explanation of ${userMessage.slice(0, 35)}... Let's scale this up to a hard constraint: if we suddenly experience a 50x spike in concurrent writes with strict consistency requirements across regions, how would you prevent split-brain and minimize replication lag?`;
+      } else if (evaluation.branchDecision === 'PROVIDE_HINT') {
+        responseText = `That's completely alright—these architectural concepts can get quite nuanced. Let's take a step back and look at a simpler prerequisite: imagine we only have a single-node setup with basic concurrency. How would you approach thread safety there before we scale out?`;
       } else if (evaluation.branchDecision === 'PROBE_DEEPER') {
         responseText = `That covers the baseline. However, digging into the trade-offs: what happens if the worker thread pool is exhausted or a deadlock occurs in that exact flow? Walk me through how you'd diagnose and mitigate that.`;
       } else {
@@ -495,6 +506,8 @@ export async function generateNextAdaptiveResponse(
     } else {
       if (evaluation.branchDecision === 'LEVEL_UP') {
         responseText = `That's a very clear summary of the Situation and Task. Now, looking at the Result and leadership dimensions: how did you measure success, what pushback did you handle from executive stakeholders, and what would you improve today?`;
+      } else if (evaluation.branchDecision === 'PROVIDE_HINT') {
+        responseText = `No worries at all, navigating complex stakeholder dynamics is always tricky. Let's break this down into smaller steps: what was the immediate primary goal of that project, and who was your primary point of contact?`;
       } else {
         responseText = `Thank you for sharing that context. Focusing specifically on the Action step of the STAR framework: what specific technical or interpersonal decisions did you personally spearhead to resolve the deadlock?`;
       }

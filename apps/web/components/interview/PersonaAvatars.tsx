@@ -194,3 +194,28 @@ export function CandidateProfileAvatar({ className = "w-9 h-9" }: { className?: 
     </div>
   );
 }
+
+export function SkepticalInterrogatorAvatar({ className = "w-12 h-12" }: { className?: string }) {
+  return (
+    <div className={`relative rounded-full overflow-hidden bg-[#F3E8FF] dark:bg-[#2E1065] flex items-center justify-center shrink-0 ${className}`}>
+      <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="50" fill="#FAF5FF" />
+        <ellipse cx="50" cy="40" rx="26" ry="22" fill="#581C87" />
+        <ellipse cx="50" cy="46" rx="20" ry="21" fill="#FCD34D" />
+        <path d="M26 38 C 30 20, 70 20, 74 38 C 72 30, 60 26, 50 27 C 40 26, 30 30, 26 38 Z" fill="#4C1D95" />
+        <path d="M35 41 Q 42 37 47 41" stroke="#3B0764" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M53 41 Q 58 37 65 41" stroke="#3B0764" strokeWidth="2.5" strokeLinecap="round" />
+        <circle cx="41" cy="47" r="2.5" fill="#3B0764" />
+        <circle cx="59" cy="47" r="2.5" fill="#3B0764" />
+        <rect x="33" y="42" width="16" height="11" rx="3" stroke="#7C3AED" strokeWidth="2" fill="rgba(124,58,237,0.15)" />
+        <rect x="51" y="42" width="16" height="11" rx="3" stroke="#7C3AED" strokeWidth="2" fill="rgba(124,58,237,0.15)" />
+        <line x1="49" y1="46" x2="51" y2="46" stroke="#7C3AED" strokeWidth="2" />
+        <path d="M43 59 Q 50 56 57 59" stroke="#6B21A8" strokeWidth="2" strokeLinecap="round" />
+        <rect x="43" y="64" width="14" height="12" fill="#F59E0B" />
+        <path d="M18 100 C 20 74, 34 70, 50 70 C 66 70, 80 74, 82 100 Z" fill="#3B0764" />
+        <polygon points="50,86 42,70 58,70" fill="#FFFFFF" />
+        <polygon points="50,75 53,88 50,100 47,88" fill="#7C3AED" />
+      </svg>
+    </div>
+  );
+}

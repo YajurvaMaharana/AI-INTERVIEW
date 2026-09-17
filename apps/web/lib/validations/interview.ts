@@ -12,7 +12,7 @@ export const interviewSetupSchema = z.object({
     required_error: "Please select a difficulty level",
   }),
   persona: z
-    .enum(["tech-grinder", "hr-partner", "simulation-boss", "supportive-mentor"])
+    .enum(["tech-grinder", "hr-partner", "simulation-boss", "supportive-mentor", "skeptical-interrogator"])
     .default("tech-grinder"),
   duration: z.coerce.number().min(5).max(120).default(30),
   language: z.string().min(2).default("English"),
