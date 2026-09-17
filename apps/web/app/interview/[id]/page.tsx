@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/exhaustive-deps */
 
 import * as React from "react";
 import Link from "next/link";
@@ -23,6 +24,8 @@ import { InterviewInput } from "@/components/interview/InterviewInput";
 import { LiveVoiceWorkspace } from "@/components/interview/LiveVoiceWorkspace";
 import { Button } from "@/components/ui/button";
 import { AdaptiveTelemetryHUD } from "@/components/interview/AdaptiveTelemetryHUD";
+import { InterviewerAudioPlayer } from "@/components/interview/InterviewerAudioPlayer";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { cn } from "@/lib/utils";
 import type { SessionAdaptiveTelemetry } from "@/lib/services/ai-engine/adaptive-engine.service";
 import type { JobDescriptionParsedData } from "@/lib/types/database.types";
@@ -39,6 +42,7 @@ interface SessionData {
   difficulty: string;
   type: string;
   status: string;
+  persona?: string | null;
   modality?: string;
   jd_data?: JobDescriptionParsedData | null;
 }
@@ -65,7 +69,53 @@ export default function InterviewPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [lastFailedMessage, setLastFailedMessage] = React.useState<string | null>(null);
 
+  // Spoken message tracking for Hands-Free Speech Flow
+  const spokenMessageIdsRef = React.useRef<Set<string>>(new Set());
+
+  // Text-To-Speech Interviewer Engine
+  const tts = useTextToSpeech({
+    defaultAutoPlay: true,
+    defaultRate: 1.0,
+    personaId: session?.persona || "tech-grinder",
+  });
+
+  // Latest AI message text for quick replay
+  const latestAiMessage = React.useMemo(() => {
+    const aiMsgs = messages.filter(
+      (m) => m.role === "assistant" || m.role === "interviewer" || m.role === "system"
+    );
+    return aiMsgs.length > 0 ? aiMsgs[aiMsgs.length - 1] : null;
+  }, [messages]);
+
+  // Persona name resolution
+  const personaDisplayName = React.useMemo(() => {
+    const p = session?.persona || "tech-grinder";
+    if (p === "hr-partner") return "Sarah Jenkins (HR)";
+    if (p === "simulation-boss") return "Marcus Sterling (VP)";
+    if (p === "supportive-mentor") return "Elena Rostova (Staff)";
+    return "Alex Vance (Lead)";
+  }, [session?.persona]);
+
+  // Auto-speak new AI interviewer questions as soon as generated (Hands-Free Flow)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  React.useEffect(() => {
+    if (!latestAiMessage || !latestAiMessage.id) return;
+
+    if (!spokenMessageIdsRef.current.has(latestAiMessage.id)) {
+      spokenMessageIdsRef.current.add(latestAiMessage.id);
+
+      if (tts.autoPlayEnabled && !tts.isMuted) {
+        // Subtle delay to ensure smooth UI transition before speech begins
+        const timer = setTimeout(() => {
+          tts.speak(latestAiMessage.content);
+        }, 250);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [latestAiMessage]);
+
   // Load existing session, messages, and initial telemetry
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     let isMounted = true;
 
@@ -111,6 +161,7 @@ export default function InterviewPage() {
     loadSessionData();
     return () => {
       isMounted = false;
+      tts.stop();
     };
   }, [interviewId]);
 
@@ -123,6 +174,9 @@ export default function InterviewPage() {
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
+
+    // Stop ongoing speech before user speaks/sends
+    tts.stop();
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -196,6 +250,7 @@ export default function InterviewPage() {
   };
 
   const handleEndSession = () => {
+    tts.stop();
     router.push(`/interview/${encodeURIComponent(interviewId)}/feedback`);
   };
 
