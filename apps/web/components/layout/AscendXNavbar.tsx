@@ -88,9 +88,9 @@ export default function AscendXNavbar({
     },
     {
       name: "Voice & Speech Coach",
-      href: "#voice-coach",
+      href: "/voice-coach",
       icon: AudioLines,
-      action: onOpenVoiceModal || (() => setIsVoiceCoachOpen(true)),
+      action: () => router.push("/voice-coach"),
     },
     {
       name: "Day Simulations",
@@ -106,9 +106,9 @@ export default function AscendXNavbar({
     },
     {
       name: "Feedback Hub",
-      href: "/dashboard/feedback",
+      href: "/feedback-hub",
       icon: Sparkles,
-      action: () => router.push("/dashboard?view=feedback"),
+      action: () => router.push("/feedback-hub"),
     },
   ];
 

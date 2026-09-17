@@ -284,12 +284,20 @@ export default function FeedbackPage() {
 
             {/* Bottom Actions */}
             <div className="flex flex-wrap items-center justify-between gap-4 pt-4">
-              <Button asChild variant="outline" size="sm" className="gap-1.5">
-                <Link href={`/interview/${sessionId}`}>
-                  <MessageSquare className="h-4 w-4" />
-                  <span>Review Transcript</span>
-                </Link>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button asChild variant="outline" size="sm" className="gap-1.5">
+                  <Link href={`/interview/${sessionId}`}>
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Review Transcript</span>
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm" className="gap-1.5 border-orange-500/40 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-slate-800">
+                  <Link href="/feedback-hub">
+                    <Sparkles className="h-4 w-4 text-orange-500" />
+                    <span>Feedback Hub & Replays</span>
+                  </Link>
+                </Button>
+              </div>
               <div className="flex items-center gap-3">
                 <Button asChild variant="ghost" size="sm">
                   <Link href="/dashboard">Dashboard</Link>
