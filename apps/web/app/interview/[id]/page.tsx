@@ -339,8 +339,22 @@ export default function InterviewPage() {
       </header>
 
       {/* ── Real-Time Adaptive Difficulty & Telemetry HUD ── */}
-      <div className="px-4 sm:px-6 md:px-8 pt-3 pb-1 max-w-4xl mx-auto w-full">
+      <div className="px-4 sm:px-6 md:px-8 pt-3 pb-1 max-w-4xl mx-auto w-full space-y-2">
         <AdaptiveTelemetryHUD telemetry={telemetry} />
+
+        {/* Visible Adaptation Reason Notification Banner */}
+        {telemetry?.branchDescription && (
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-transparent dark:from-amber-500/15 dark:via-orange-500/15 border border-amber-500/30 dark:border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 shadow-2xs animate-in fade-in slide-in-from-top-1 duration-300">
+            <Sparkles className="h-4 w-4 shrink-0 text-[#E8602E] animate-pulse" />
+            <div className="flex-1 font-medium leading-relaxed">
+              <span className="font-extrabold mr-1 text-[#E8602E]">AI Adaptation Rationale:</span>
+              <span>{telemetry.branchDescription}</span>
+            </div>
+            <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/80 dark:bg-[#1C2230] text-amber-700 dark:text-amber-300 font-bold border border-amber-500/20 shadow-2xs">
+              Live Shift
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ── Scrollable Chat Messages Area ── */}

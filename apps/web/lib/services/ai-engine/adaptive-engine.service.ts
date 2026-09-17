@@ -204,29 +204,29 @@ export function evaluateCandidateResponse(
   if (score >= 82) {
     branchDecision = 'LEVEL_UP';
     difficultyAdjustment = 0.2;
-    feedbackNote = 'Strong response. Scale up complexity with high concurrency or multi-region constraints.';
+    feedbackNote = `Adapted to Level Up (+0.2 Tier): Your answer demonstrated strong architectural mastery and trade-off awareness (Score: ${score}/100). The next question escalates to high-scale concurrency and distributed failure modes.`;
     suggestedFocusArea = 'High-Scale Concurrency & Edge Cases';
   } else if (score >= 60) {
     if (weaknesses.length > 0) {
       branchDecision = 'PROBE_DEEPER';
       difficultyAdjustment = 0.05;
-      feedbackNote = `Good foundation, but probe candidate on: ${weaknesses[0]}`;
+      feedbackNote = `Adapted to Probe Deeper: Your response had a solid foundational grasp (Score: ${score}/100), but left specific gaps (${weaknesses[0]}). The next question drills into this exact edge case.`;
       suggestedFocusArea = weaknesses[0];
     } else {
       branchDecision = 'TRANSITION_TOPIC';
       difficultyAdjustment = 0.1;
-      feedbackNote = 'Solid explanation. Smooth transition to next architectural domain.';
+      feedbackNote = `Adapted to Topic Transition: You successfully covered all core dimensions of this topic (Score: ${score}/100). Smoothly transitioning to the next core competency domain.`;
       suggestedFocusArea = 'Next Domain Dimension';
     }
   } else if (wordCount < 10 || answerLower.includes("don't know") || answerLower.includes('not sure')) {
     branchDecision = 'PROVIDE_HINT';
     difficultyAdjustment = -0.2;
-    feedbackNote = 'Candidate indicated uncertainty. Offer a constructive architectural hint and guide.';
+    feedbackNote = `Adapted to Guided Hint (-0.2 Tier): Your answer indicated uncertainty or limited depth. The AI is providing a constructive architectural hint to guide you through the prerequisite concept.`;
     suggestedFocusArea = 'Guided Concept Breakdown';
   } else {
     branchDecision = 'PROBE_DEEPER';
     difficultyAdjustment = -0.1;
-    feedbackNote = 'Incomplete response. Target the unaddressed trade-offs and edge cases.';
+    feedbackNote = `Adapted to Edge-Case Probe (-0.1 Tier): Your answer was concise or missed key trade-off trade-offs (Score: ${score}/100). The next question targets unaddressed failure modes and operational bottlenecks.`;
     suggestedFocusArea = 'Root Cause & Failure Modes';
   }
 

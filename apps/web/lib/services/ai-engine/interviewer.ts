@@ -23,6 +23,7 @@ import {
   generateDeterministicClaimsAudit,
   buildClaimsPromptGrounding,
 } from '../claims-audit.service';
+import { buildCandidateProfilePromptContext } from '../candidate-profile.service';
 import {
   getOrCreateSessionTelemetry,
   evaluateCandidateResponse,
@@ -202,6 +203,7 @@ function buildSystemPrompt(
   personaGrounding?: string,
   practiceModeGrounding?: string,
   metaGrounding?: string,
+  candidateProfileContext?: string,
 ): string {
   const template = getSystemPromptTemplate(type);
   const variables: PromptVariables = { role, difficulty };
@@ -229,6 +231,10 @@ function buildSystemPrompt(
 
   if (claimsGrounding) {
     basePrompt = `${basePrompt}\n\n${claimsGrounding}`;
+  }
+
+  if (candidateProfileContext) {
+    basePrompt = `${basePrompt}\n\n${candidateProfileContext}`;
   }
 
   if (adaptivePromptContext) {

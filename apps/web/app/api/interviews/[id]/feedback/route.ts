@@ -6,6 +6,7 @@ import {
   getFeedbackBySessionId,
   updateSession,
 } from '@/lib/services/db.service';
+import { updateCandidateIntelligenceProfile } from '@/lib/services/candidate-profile.service';
 import { GoogleGenAI } from '@google/genai';
 import { resolveGeminiModel, generateWithModelFallback } from '@/lib/utils/gemini-model';
 import type { JobDescriptionParsedData } from '@/lib/types/database.types';
@@ -213,6 +214,17 @@ export async function POST(
 
     // Mark session as completed in Supabase
     await updateSession(sessionId, { status: 'completed' });
+
+    // Sync long-term candidate intelligence profile
+    try {
+      await updateCandidateIntelligenceProfile(session.user_id, {
+        type: session.type,
+        difficulty: session.difficulty,
+        report,
+      });
+    } catch (profErr) {
+      console.warn('[api/feedback] Failed to update candidate intelligence profile:', profErr);
+    }
 
     return NextResponse.json({ report }, { status: 201 });
   } catch (err: any) {
