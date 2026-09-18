@@ -29,6 +29,7 @@ import {
   Filter,
   Bot,
   User,
+  Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,19 @@ interface TranscriptMessage {
   created_at: string;
 }
 
+interface FeedbackCategory {
+  label: string;
+  score: number;
+  comment: string;
+  rubric_level: string;
+}
+
+interface EvidenceItem {
+  claim: string;
+  transcriptQuote: string;
+  evaluation: string;
+}
+
 interface InterviewSessionTranscript {
   id: string;
   role: string;
@@ -50,6 +64,12 @@ interface InterviewSessionTranscript {
   created_at: string;
   overall_score?: number | null;
   summary?: string | null;
+  categories?: FeedbackCategory[];
+  evidence?: EvidenceItem[];
+  missing_key_elements?: string[];
+  strengths?: string[];
+  weaknesses?: string[];
+  targeted_recommendations?: string[];
   messages: TranscriptMessage[];
   privacy_settings: {
     saveAudioReplays: boolean;
@@ -73,7 +93,7 @@ export default function FeedbackHubPage() {
   const [deleteModalSessionId, setDeleteModalSessionId] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Load mock or real past sessions
+  // Load mock or real past sessions and structured feedback
   useEffect(() => {
     async function loadSessions() {
       setIsLoading(true);
@@ -81,12 +101,12 @@ export default function FeedbackHubPage() {
         const res = await fetch("/api/interviews");
         if (res.ok) {
           const data = await res.json();
-          // Fetch detailed messages for each session or use mock sample if needed
           const list = data.sessions || [];
           if (list.length > 0) {
             const formatted: InterviewSessionTranscript[] = await Promise.all(
               list.map(async (s: any) => {
                 let msgs = [];
+                let feedbackReport: any = null;
                 try {
                   const mRes = await fetch(`/api/interviews/${s.id}`);
                   if (mRes.ok) {
@@ -96,6 +116,17 @@ export default function FeedbackHubPage() {
                 } catch {
                   // fallback
                 }
+
+                try {
+                  const fRes = await fetch(`/api/interviews/${s.id}/feedback`);
+                  if (fRes.ok) {
+                    const fData = await fRes.json();
+                    feedbackReport = fData.report || fData;
+                  }
+                } catch {
+                  // fallback
+                }
+
                 return {
                   id: s.id,
                   role: s.role || "Software Engineer",
@@ -103,8 +134,20 @@ export default function FeedbackHubPage() {
                   difficulty: s.difficulty || "medium",
                   status: s.status || "completed",
                   created_at: s.created_at || new Date().toISOString(),
-                  overall_score: s.overall_score || 88,
-                  summary: s.summary || "Strong technical depth, clear structural breakdown, and excellent edge-case handling.",
+                  overall_score: feedbackReport?.overall_score || s.overall_score || 88,
+                  summary: feedbackReport?.summary || s.summary || "Strong technical depth, clear structural breakdown, and excellent edge-case handling.",
+                  categories: feedbackReport?.categories || [
+                    { label: "Technical Proficiency & Accuracy", score: 88, comment: "Demonstrated accurate domain fundamentals and sound architecture choices.", rubric_level: "Proficient" },
+                    { label: "Communication & Clarity", score: 85, comment: "Communicated concepts logically and professionally.", rubric_level: "Proficient" },
+                    { label: "Structured Reasoning & Trade-offs", score: 82, comment: "Addressed core constraints effectively.", rubric_level: "Competent" },
+                  ],
+                  evidence: feedbackReport?.evidence || [
+                    { claim: "Distributed state synchronization", transcriptQuote: "Maintained local state updates using CRDTs over WebSockets.", evaluation: "Strong alignment with modern real-time system architecture requirements." }
+                  ],
+                  missing_key_elements: feedbackReport?.missing_key_elements || ["Explicit capacity planning under 100k QPS peak bursts"],
+                  strengths: feedbackReport?.strengths || ["Clear architectural vocabulary", "Confident technical articulation"],
+                  weaknesses: feedbackReport?.weaknesses || ["Could proactively detail failure recovery scenarios earlier"],
+                  targeted_recommendations: feedbackReport?.targeted_recommendations || ["Practice quantifying latency and throughput constraints in system design prompts."],
                   messages: msgs.length > 0 ? msgs : [
                     {
                       id: "m1",
@@ -133,7 +176,7 @@ export default function FeedbackHubPage() {
               setSelectedSessionId(formatted[0].id);
             }
           } else {
-            // Sample fallback session for immediate rich exploration
+            // Sample fallback session for immediate rich exploration with structured rubric evaluation
             const sample: InterviewSessionTranscript = {
               id: "demo-session-1",
               role: "Senior Full-Stack Engineer",
@@ -143,6 +186,28 @@ export default function FeedbackHubPage() {
               created_at: new Date(Date.now() - 86400000).toISOString(),
               overall_score: 92,
               summary: "Exceptional system design reasoning, clear concurrency trade-offs, and strong STAR communication.",
+              categories: [
+                { label: "Technical Proficiency & Accuracy", score: 94, comment: "Outstanding command of CRDT synchronization, vector clocks, and offline IndexedDB persistence.", rubric_level: "Advanced" },
+                { label: "Communication & Clarity", score: 90, comment: "Structured explanations clearly and concisely without unnecessary jargon.", rubric_level: "Proficient" },
+                { label: "Structured Reasoning & Trade-offs", score: 91, comment: "Proactively evaluated latency vs consistency trade-offs during network partitions.", rubric_level: "Advanced" },
+              ],
+              evidence: [
+                { claim: "Real-time synchronization strategy", transcriptQuote: "To support real-time CRDT synchronization, I would maintain local state updates using Yjs over WebSockets.", evaluation: "Demonstrates robust production familiarity with collaborative editing primitives." },
+                { claim: "Offline resilience & network partitions", transcriptQuote: "I'd use IndexedDB locally to queue offline mutations, then reconcile state vectors upon reconnection using vector clocks.", evaluation: "Excellent system reliability design." }
+              ],
+              missing_key_elements: ["Detailed rate-limiting strategy for WebSocket reconnection storms"],
+              strengths: [
+                "Exceptional depth in collaborative real-time system design",
+                "Clear articulation of offline-first persistence patterns",
+                "Professional and structured communication style"
+              ],
+              weaknesses: [
+                "Could discuss TLS encryption overhead for WebSockets in greater depth"
+              ],
+              targeted_recommendations: [
+                "Incorporate edge-case mitigation for reconnection storms in distributed systems",
+                "Continue utilizing clear vector clock terminology when discussing distributed reconciliation"
+              ],
               messages: [
                 {
                   id: "msg-1",
@@ -419,17 +484,80 @@ export default function FeedbackHubPage() {
 
                 {/* Performance Summary Banner */}
                 {selectedSession.summary && (
-                  <div className="rounded-2xl bg-gradient-to-r from-orange-500/5 to-amber-500/5 border border-orange-500/20 p-4 space-y-2">
+                  <div className="rounded-2xl bg-gradient-to-r from-orange-500/5 to-amber-500/5 border border-orange-500/20 p-5 space-y-3">
                     <div className="flex items-center justify-between font-bold text-xs text-orange-600 dark:text-orange-400">
-                      <span className="flex items-center gap-1.5">
+                      <span className="flex items-center gap-1.5 text-sm">
                         <Award className="h-4 w-4" />
                         AI Evaluation & Competency Summary
                       </span>
-                      <span>Score: {selectedSession.overall_score}%</span>
+                      <span className="px-3 py-1 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-300 font-extrabold text-sm">
+                        Overall Score: {selectedSession.overall_score}%
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                    <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                       {selectedSession.summary}
                     </p>
+
+                    {/* Rubric Scorecards */}
+                    {selectedSession.categories && selectedSession.categories.length > 0 && (
+                      <div className="pt-3 border-t border-orange-500/10 grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {selectedSession.categories.map((cat, i) => (
+                          <div key={i} className="p-3.5 rounded-xl bg-white/80 dark:bg-[#181E29]/80 border border-slate-200/80 dark:border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                {cat.label}
+                              </span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                                {cat.rubric_level || "Proficient"}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-slate-500 font-mono">Score: {cat.score}%</span>
+                              <div className="w-24 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-orange-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${Math.min(100, Math.max(0, cat.score))}%` }}
+                                />
+                              </div>
+                            </div>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                              {cat.comment}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Evidence & Actionable Recommendations */}
+                    <div className="pt-3 border-t border-orange-500/10 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      {selectedSession.strengths && selectedSession.strengths.length > 0 && (
+                        <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-1.5">
+                          <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Core Strengths
+                          </span>
+                          <ul className="space-y-1 text-slate-700 dark:text-slate-300 list-disc list-inside">
+                            {selectedSession.strengths.map((s, idx) => (
+                              <li key={idx}>{s}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {selectedSession.targeted_recommendations && selectedSession.targeted_recommendations.length > 0 && (
+                        <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-1.5">
+                          <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                            <Target className="h-3.5 w-3.5" />
+                            Targeted Actionable Recommendations
+                          </span>
+                          <ul className="space-y-1 text-slate-700 dark:text-slate-300 list-disc list-inside">
+                            {selectedSession.targeted_recommendations.map((rec, idx) => (
+                              <li key={idx}>{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 

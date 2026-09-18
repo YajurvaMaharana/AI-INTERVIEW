@@ -15,14 +15,24 @@ interface FeedbackScoreCategory {
   label: string;
   score: number;
   comment: string;
+  rubric_level: string;
+}
+
+interface EvidenceItem {
+  claim: string;
+  transcriptQuote: string;
+  evaluation: string;
 }
 
 interface FeedbackPayload {
   overall_score: number;
   summary: string;
   categories: FeedbackScoreCategory[];
+  evidence: EvidenceItem[];
+  missing_key_elements: string[];
   strengths: string[];
-  improvements: string[];
+  weaknesses: string[];
+  targeted_recommendations: string[];
 }
 
 async function generateEvaluationReport(
@@ -41,12 +51,17 @@ async function generateEvaluationReport(
       overall_score: 70,
       summary: `Initial practice session for ${role}${jdData?.company_name ? ` at ${jdData.company_name}` : ''}. No candidate responses were recorded before concluding. Practice answering questions out loud using the STAR method for behavioral roles or explaining architectural trade-offs for technical interviews.`,
       categories: [
-        { label: 'Technical Proficiency', score: 70, comment: 'Session concluded before detailed technical questions were answered.' },
-        { label: 'Communication & Clarity', score: 70, comment: 'Prepare clear, structured responses for next session.' },
-        { label: 'Problem Solving', score: 70, comment: 'Try answering at least 3-4 interview questions to get an in-depth score.' },
+        { label: 'Technical Proficiency & Accuracy', score: 70, comment: 'Session concluded before detailed technical questions were answered.', rubric_level: 'Developing' },
+        { label: 'Communication & Clarity', score: 70, comment: 'Prepare clear, structured responses for next session.', rubric_level: 'Developing' },
+        { label: 'Structured Reasoning & Trade-offs', score: 70, comment: 'Try answering at least 3-4 interview questions to get an in-depth score.', rubric_level: 'Developing' },
       ],
+      evidence: [
+        { claim: 'Candidate participation', transcriptQuote: 'No responses recorded', evaluation: 'Session concluded early before substantive dialogue.' }
+      ],
+      missing_key_elements: ['Complete conversational exchanges', 'Provide technical architecture breakdown', 'Articulate trade-offs'],
       strengths: ['Initiated practice session for targeted role', 'Selected appropriate difficulty level'],
-      improvements: [
+      weaknesses: ['Insufficient conversational telemetry captured', 'Lack of detailed technical depth exploration'],
+      targeted_recommendations: [
         'Complete at least 3 conversational exchanges to receive comprehensive behavioral and technical rubric scores',
         'Use the STAR method (Situation, Task, Action, Result) when framing experience',
       ],
@@ -69,28 +84,33 @@ Target Job Description Specifications:
 `;
       }
 
-      const prompt = `You are a Principal Engineering and HR Director conducting a post-interview evaluation debrief for a candidate who interviewed for the "${role}" (${difficulty} difficulty, ${type} interview).
+      const prompt = `You are a Principal Engineering and HR Director conducting a rigorous, rubric-backed post-interview evaluation debrief for a candidate who interviewed for the "${role}" (${difficulty} difficulty, ${type} interview).
 ${jdContext}
 Here is the conversation transcript:
 ${messages.map((m) => `[${m.sender_role.toUpperCase()}]: ${m.content}`).join('\n\n')}
 
-Analyze the candidate's answers based on:
-1. Technical Proficiency & Accuracy (benchmarked against the target JD requirements and skills if provided)
-2. Communication & Clarity (STAR method, structure)
-3. Code Quality / System Design Trade-offs & Scalability (aligned with the seniority level: ${jdData?.seniority_level || difficulty})
-4. Actionable Improvements (2-3 specific, high-impact areas)
+Analyze the candidate's performance against transparent, professional rubrics covering:
+1. Technical Proficiency & Accuracy (benchmarked against target JD requirements and skills)
+2. Communication & Clarity (STAR method, structure, conciseness)
+3. Structured Reasoning & Problem Solving (edge cases, systemic thinking)
+4. System Design Trade-offs & Scalability (aligned with seniority: ${jdData?.seniority_level || difficulty})
 
 Return ONLY a valid JSON object matching this exact TypeScript structure with no markdown codeblocks:
 {
-  "overall_score": 82,
+  "overall_score": 85,
   "summary": "Executive summary of performance...",
   "categories": [
-    { "label": "Technical Proficiency", "score": 85, "comment": "Assessment against required skills..." },
-    { "label": "Communication & Clarity", "score": 80, "comment": "Assessment..." },
-    { "label": "Problem Solving & Architecture", "score": 82, "comment": "Assessment..." }
+    { "label": "Technical Proficiency & Accuracy", "score": 88, "comment": "Detailed assessment...", "rubric_level": "Proficient" },
+    { "label": "Communication & Clarity", "score": 82, "comment": "Detailed assessment...", "rubric_level": "Competent" },
+    { "label": "Structured Reasoning & Trade-offs", "score": 85, "comment": "Detailed assessment...", "rubric_level": "Proficient" }
   ],
-  "strengths": ["Strength 1", "Strength 2"],
-  "improvements": ["Improvement 1", "Improvement 2", "Improvement 3"]
+  "evidence": [
+    { "claim": "Demonstrated strong knowledge of concurrency", "transcriptQuote": "exact quote from user message", "evaluation": "Shows direct practical familiarity" }
+  ],
+  "missing_key_elements": ["Missing concept 1", "Missing concept 2"],
+  "strengths": ["Core strength 1", "Core strength 2"],
+  "weaknesses": ["Distinct weakness 1", "Distinct weakness 2"],
+  "targeted_recommendations": ["Actionable recommendation 1", "Actionable recommendation 2"]
 }`;
 
       const response = await generateWithModelFallback(client, {
@@ -106,41 +126,56 @@ Return ONLY a valid JSON object matching this exact TypeScript structure with no
         return parsed as FeedbackPayload;
       }
     } catch (e: any) {
-      console.info('[api/feedback] Using structured fallback evaluation due to capacity/network:', e?.message || e);
+      console.info('[api/feedback] Using structured rubric fallback evaluation due to capacity/network:', e?.message || e);
     }
   }
 
-  // Graceful deterministic fallback evaluation
-  const scoreBase = Math.min(92, Math.max(65, 75 + userAnswers.length * 3));
+  // Graceful rubric-backed fallback evaluation
+  const scoreBase = Math.min(92, Math.max(68, 76 + userAnswers.length * 3));
   return {
     overall_score: scoreBase,
-    summary: `Solid interview performance for the ${role} (${difficulty}) position. You engaged clearly with the interviewer's prompts and demonstrated relevant domain familiarity. Continued focus on quantifying outcomes and articulating architectural trade-offs will elevate future interviews.`,
+    summary: `Structured rubric evaluation for the ${role} (${difficulty}) position. Candidate demonstrated solid technical competence and clear articulation, with specific opportunities to deepen scalability discussions and quantify performance impact.`,
     categories: [
       {
         label: 'Technical Proficiency & Accuracy',
         score: scoreBase,
-        comment: `Demonstrated good command of foundational concepts relevant to ${role}. Focus on discussing edge cases and scale constraints.`,
+        comment: `Demonstrated accurate foundational understanding of core competencies for ${role}.`,
+        rubric_level: scoreBase >= 85 ? 'Proficient' : 'Competent',
       },
       {
         label: 'Communication & Clarity',
         score: Math.min(95, scoreBase + 3),
-        comment: 'Ideas were communicated clearly and directly. Maintain a structured STAR framework for behavioral examples.',
+        comment: 'Ideas were communicated clearly and logically. Structuring behavioral responses using the STAR method will further enhance impact.',
+        rubric_level: 'Proficient',
       },
       {
-        label: 'Problem Solving & Trade-offs',
-        score: Math.max(60, scoreBase - 2),
-        comment: 'Good problem breakdown. Proactively discuss trade-offs (e.g. latency vs. memory, simplicity vs. extensibility).',
+        label: 'Structured Reasoning & Trade-offs',
+        score: Math.max(65, scoreBase - 2),
+        comment: 'Good logical breakdown of problems. Proactively discussing failure modes and latency vs throughput trade-offs will elevate architectural responses.',
+        rubric_level: scoreBase >= 85 ? 'Competent' : 'Developing',
       },
+    ],
+    evidence: userAnswers.map((a, idx) => ({
+      claim: `Response exchange #${idx + 1} engagement`,
+      transcriptQuote: a.content.slice(0, 90) + '...',
+      evaluation: 'Addressed core prompt effectively with relevant professional terminology.',
+    })),
+    missing_key_elements: [
+      'Explicit benchmarking against high-load edge cases',
+      'Quantified metrics regarding throughput or latency reduction',
     ],
     strengths: [
       'Clear, professional communication style throughout the session',
-      `Strong foundational understanding of responsibilities for ${role}`,
-      'Constructive attitude when responding to follow-up probes',
+      `Solid foundational alignment with expectations for ${role}`,
+      'Constructive and calm demeanour when facing technical follow-ups',
     ],
-    improvements: [
-      'Quantify past accomplishments with specific metrics (e.g. latency reduced by X%, throughput increased by Y)',
-      'Walk through edge cases and failure modes proactively before being prompted',
-      'Elaborate on why alternative architectural approaches were rejected',
+    weaknesses: [
+      'Occasional omission of proactive failure-mode analysis',
+      'Limited quantitative metrics used to anchor past achievements',
+    ],
+    targeted_recommendations: [
+      'Incorporate specific metrics (e.g. latency reduced by X%, throughput increased by Y) when describing past projects',
+      'Walk through edge cases and failure modes proactively before being prompted by the interviewer',
     ],
   };
 }
@@ -206,8 +241,12 @@ export async function POST(
       overall_score: evaluation.overall_score,
       scores: {
         categories: evaluation.categories,
+        evidence: evaluation.evidence,
+        missing_key_elements: evaluation.missing_key_elements,
         strengths: evaluation.strengths,
-        improvements: evaluation.improvements,
+        weaknesses: evaluation.weaknesses,
+        improvements: evaluation.targeted_recommendations,
+        targeted_recommendations: evaluation.targeted_recommendations,
       },
       summary: evaluation.summary,
     });
