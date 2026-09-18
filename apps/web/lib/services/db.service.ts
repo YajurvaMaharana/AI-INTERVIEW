@@ -837,3 +837,105 @@ export async function updateFeedbackReport(
   inMemoryFeedback.set(id, updated);
   return updated;
 }
+
+// ---------------------------------------------------------------------------
+// Comprehensive Feedback & Evaluation Persistence (Rubrics, Technical Scores, STAR)
+// ---------------------------------------------------------------------------
+
+export async function saveComprehensiveEvaluation(
+  sessionId: string,
+  userId: string,
+  evaluation: {
+    overall_score: number;
+    categories: any[];
+    strengths: string[];
+    weaknesses: string[];
+    targeted_recommendations: string[];
+    summary: string;
+    star_analysis: any;
+    technical_dimensions: any;
+  }
+): Promise<void> {
+  const client = getSupabaseAdminClient();
+  if (client && isValidUUID(sessionId) && isValidUUID(userId)) {
+    try {
+      // 1. Insert into feedback_rubrics
+      await client.from('feedback_rubrics').upsert({
+        session_id: sessionId,
+        user_id: userId,
+        overall_score: evaluation.overall_score,
+        categories: evaluation.categories || [],
+        strengths: evaluation.strengths || [],
+        weaknesses: evaluation.weaknesses || [],
+        recommendations: evaluation.targeted_recommendations || [],
+        summary: evaluation.summary || '',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'session_id' });
+
+      // 2. Insert into technical_scores
+      if (evaluation.technical_dimensions) {
+        await client.from('technical_scores').upsert({
+          session_id: sessionId,
+          user_id: userId,
+          dimensions: evaluation.technical_dimensions.dimensions || [],
+          average_dimension_score: evaluation.technical_dimensions.average_dimension_score || 0,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'session_id' });
+      }
+
+      // 3. Insert into star_evaluations
+      if (evaluation.star_analysis) {
+        await client.from('star_evaluations').upsert({
+          session_id: sessionId,
+          user_id: userId,
+          components: evaluation.star_analysis.components || [],
+          quantitative_metrics_detected: evaluation.star_analysis.quantitative_metrics_detected || false,
+          personal_ownership_score: evaluation.star_analysis.personal_ownership_score || 0,
+          self_reflection_score: evaluation.star_analysis.self_reflection_score || 0,
+          missing_structural_gaps: evaluation.star_analysis.missing_structural_gaps || [],
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'session_id' });
+      }
+    } catch (err: any) {
+      console.warn('[db.service] saveComprehensiveEvaluation Supabase error:', err?.message || err);
+    }
+  }
+}
+
+export async function getComprehensiveEvaluation(sessionId: string): Promise<{
+  rubric?: any;
+  technical_scores?: any;
+  star_analysis?: any;
+} | null> {
+  const client = getSupabaseAdminClient();
+  if (client && isValidUUID(sessionId)) {
+    try {
+      const [rubricRes, techRes, starRes] = await Promise.all([
+        client.from('feedback_rubrics').select().eq('session_id', sessionId).maybeSingle(),
+        client.from('technical_scores').select().eq('session_id', sessionId).maybeSingle(),
+        client.from('star_evaluations').select().eq('session_id', sessionId).maybeSingle(),
+      ]);
+
+      if (rubricRes.data || techRes.data || starRes.data) {
+        return {
+          rubric: rubricRes.data,
+          technical_scores: techRes.data ? {
+            dimensions: techRes.data.dimensions,
+            average_dimension_score: techRes.data.average_dimension_score,
+          } : undefined,
+          star_analysis: starRes.data ? {
+            components: starRes.data.components,
+            quantitative_metrics_detected: starRes.data.quantitative_metrics_detected,
+            personal_ownership_score: starRes.data.personal_ownership_score,
+            self_reflection_score: starRes.data.self_reflection_score,
+            missing_structural_gaps: starRes.data.missing_structural_gaps,
+          } : undefined,
+        };
+      }
+    } catch (err: any) {
+      console.warn('[db.service] getComprehensiveEvaluation error:', err?.message);
+    }
+  }
+  return null;
+}
+

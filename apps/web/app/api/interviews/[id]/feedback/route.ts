@@ -5,6 +5,8 @@ import {
   createFeedbackReport,
   getFeedbackBySessionId,
   updateSession,
+  saveComprehensiveEvaluation,
+  getComprehensiveEvaluation,
 } from '@/lib/services/db.service';
 import { updateCandidateIntelligenceProfile } from '@/lib/services/candidate-profile.service';
 import { GoogleGenAI } from '@google/genai';
@@ -297,15 +299,27 @@ export async function GET(
   try {
     const sessionId = params.id;
     const report = await getFeedbackBySessionId(sessionId);
+    const comprehensive = await getComprehensiveEvaluation(sessionId);
 
-    if (!report) {
+    if (!report && !comprehensive) {
       return NextResponse.json(
         { error: 'Not Found', message: 'Feedback report not yet generated.' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ report }, { status: 200 });
+    const enhancedReport = {
+      ...(report || {}),
+      scores: {
+        ...(report?.scores || {}),
+        star_analysis: comprehensive?.star_analysis || (report?.scores as any)?.star_analysis,
+        technical_dimensions: comprehensive?.technical_scores || (report?.scores as any)?.technical_dimensions,
+      },
+      star_analysis: comprehensive?.star_analysis || (report?.scores as any)?.star_analysis,
+      technical_dimensions: comprehensive?.technical_scores || (report?.scores as any)?.technical_dimensions,
+    };
+
+    return NextResponse.json({ report: enhancedReport }, { status: 200 });
   } catch (err: any) {
     console.error('[api/interviews/feedback] GET error:', err);
     return NextResponse.json(
@@ -332,8 +346,14 @@ export async function POST(
 
     // Check if report already exists in Supabase
     const existing = await getFeedbackBySessionId(sessionId);
-    if (existing) {
-      return NextResponse.json({ report: existing }, { status: 200 });
+    const comprehensiveExisting = await getComprehensiveEvaluation(sessionId);
+    if (existing || comprehensiveExisting) {
+      const enhanced = {
+        ...(existing || {}),
+        star_analysis: comprehensiveExisting?.star_analysis || (existing?.scores as any)?.star_analysis,
+        technical_dimensions: comprehensiveExisting?.technical_scores || (existing?.scores as any)?.technical_dimensions,
+      };
+      return NextResponse.json({ report: enhanced }, { status: 200 });
     }
 
     const messages = await getMessagesBySessionId(sessionId);
@@ -357,9 +377,14 @@ export async function POST(
         weaknesses: evaluation.weaknesses,
         improvements: evaluation.targeted_recommendations,
         targeted_recommendations: evaluation.targeted_recommendations,
+        star_analysis: evaluation.star_analysis,
+        technical_dimensions: evaluation.technical_dimensions,
       },
       summary: evaluation.summary,
     });
+
+    // Save comprehensive feedback into dedicated tables (feedback_rubrics, technical_scores, star_evaluations)
+    await saveComprehensiveEvaluation(sessionId, session.user_id, evaluation);
 
     // Mark session as completed in Supabase
     await updateSession(sessionId, { status: 'completed' });
@@ -375,7 +400,13 @@ export async function POST(
       console.warn('[api/feedback] Failed to update candidate intelligence profile:', profErr);
     }
 
-    return NextResponse.json({ report }, { status: 201 });
+    const enhancedReport = {
+      ...report,
+      star_analysis: evaluation.star_analysis,
+      technical_dimensions: evaluation.technical_dimensions,
+    };
+
+    return NextResponse.json({ report: enhancedReport }, { status: 201 });
   } catch (err: any) {
     console.error('[api/interviews/feedback] POST error:', err);
     return NextResponse.json(
