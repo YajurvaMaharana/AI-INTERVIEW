@@ -24,6 +24,21 @@ interface EvidenceItem {
   evaluation: string;
 }
 
+interface StarComponent {
+  component: "Situation" | "Task" | "Action" | "Result";
+  status: "strong" | "partial" | "missing";
+  evidence: string;
+  feedback: string;
+}
+
+interface StarAnalysis {
+  components: StarComponent[];
+  quantitative_metrics_detected: boolean;
+  personal_ownership_score: number;
+  self_reflection_score: number;
+  missing_structural_gaps: string[];
+}
+
 interface FeedbackPayload {
   overall_score: number;
   summary: string;
@@ -33,6 +48,7 @@ interface FeedbackPayload {
   strengths: string[];
   weaknesses: string[];
   targeted_recommendations: string[];
+  star_analysis: StarAnalysis;
 }
 
 async function generateEvaluationReport(
@@ -65,6 +81,18 @@ async function generateEvaluationReport(
         'Complete at least 3 conversational exchanges to receive comprehensive behavioral and technical rubric scores',
         'Use the STAR method (Situation, Task, Action, Result) when framing experience',
       ],
+      star_analysis: {
+        components: [
+          { component: "Situation", status: "missing", evidence: "None recorded", feedback: "No context provided." },
+          { component: "Task", status: "missing", evidence: "None recorded", feedback: "No specific objective defined." },
+          { component: "Action", status: "missing", evidence: "None recorded", feedback: "No personal actions outlined." },
+          { component: "Result", status: "missing", evidence: "None recorded", feedback: "No outcome or metrics provided." }
+        ],
+        quantitative_metrics_detected: false,
+        personal_ownership_score: 50,
+        self_reflection_score: 50,
+        missing_structural_gaps: ["Entire STAR framework missing due to unrecorded answers"]
+      },
     };
   }
 
@@ -89,11 +117,11 @@ ${jdContext}
 Here is the conversation transcript:
 ${messages.map((m) => `[${m.sender_role.toUpperCase()}]: ${m.content}`).join('\n\n')}
 
-Analyze the candidate's performance against transparent, professional rubrics covering:
+Analyze the candidate's performance against transparent, professional rubrics and perform deep STAR (Situation, Task, Action, Result) storytelling analysis:
 1. Technical Proficiency & Accuracy (benchmarked against target JD requirements and skills)
-2. Communication & Clarity (STAR method, structure, conciseness)
+2. Communication & Clarity (STAR method structure, personal ownership, self-reflection)
 3. Structured Reasoning & Problem Solving (edge cases, systemic thinking)
-4. System Design Trade-offs & Scalability (aligned with seniority: ${jdData?.seniority_level || difficulty})
+4. STAR Component Evaluation: Detect Situation, Task, Action, and Result. Flag missing structural gaps (e.g. strong Action but missing Result or quantitative metrics).
 
 Return ONLY a valid JSON object matching this exact TypeScript structure with no markdown codeblocks:
 {
@@ -110,7 +138,19 @@ Return ONLY a valid JSON object matching this exact TypeScript structure with no
   "missing_key_elements": ["Missing concept 1", "Missing concept 2"],
   "strengths": ["Core strength 1", "Core strength 2"],
   "weaknesses": ["Distinct weakness 1", "Distinct weakness 2"],
-  "targeted_recommendations": ["Actionable recommendation 1", "Actionable recommendation 2"]
+  "targeted_recommendations": ["Actionable recommendation 1", "Actionable recommendation 2"],
+  "star_analysis": {
+    "components": [
+      { "component": "Situation", "status": "strong", "evidence": "...", "feedback": "..." },
+      { "component": "Task", "status": "strong", "evidence": "...", "feedback": "..." },
+      { "component": "Action", "status": "partial", "evidence": "...", "feedback": "..." },
+      { "component": "Result", "status": "missing", "evidence": "...", "feedback": "..." }
+    ],
+    "quantitative_metrics_detected": false,
+    "personal_ownership_score": 85,
+    "self_reflection_score": 80,
+    "missing_structural_gaps": ["Missing quantified impact in Result", "Action phase lacked team collaboration context"]
+  }
 }`;
 
       const response = await generateWithModelFallback(client, {
@@ -130,7 +170,7 @@ Return ONLY a valid JSON object matching this exact TypeScript structure with no
     }
   }
 
-  // Graceful rubric-backed fallback evaluation
+  // Graceful rubric-backed fallback evaluation with STAR analysis
   const scoreBase = Math.min(92, Math.max(68, 76 + userAnswers.length * 3));
   return {
     overall_score: scoreBase,
@@ -177,6 +217,21 @@ Return ONLY a valid JSON object matching this exact TypeScript structure with no
       'Incorporate specific metrics (e.g. latency reduced by X%, throughput increased by Y) when describing past projects',
       'Walk through edge cases and failure modes proactively before being prompted by the interviewer',
     ],
+    star_analysis: {
+      components: [
+        { component: "Situation", status: "strong", evidence: userAnswers[0]?.content.slice(0, 70) || "Context provided", feedback: "Clear framing of technical environment." },
+        { component: "Task", status: "strong", evidence: "Defined scope of responsibilities", feedback: "Clear objective established." },
+        { component: "Action", status: "partial", evidence: "Described individual technical implementation", feedback: "Strengthen focus on personal ownership ('I' instead of 'we')." },
+        { component: "Result", status: "missing", evidence: "No quantitative metrics provided", feedback: "Add concrete numbers (e.g. latency reduced by 40%) to close out the story." }
+      ],
+      quantitative_metrics_detected: false,
+      personal_ownership_score: 80,
+      self_reflection_score: 75,
+      missing_structural_gaps: [
+        "Result phase lacks quantified impact metrics",
+        "Action phase could emphasize stakeholder alignment"
+      ]
+    },
   };
 }
 

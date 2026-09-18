@@ -55,6 +55,21 @@ interface EvidenceItem {
   evaluation: string;
 }
 
+interface StarComponent {
+  component: "Situation" | "Task" | "Action" | "Result";
+  status: "strong" | "partial" | "missing";
+  evidence: string;
+  feedback: string;
+}
+
+interface StarAnalysis {
+  components: StarComponent[];
+  quantitative_metrics_detected: boolean;
+  personal_ownership_score: number;
+  self_reflection_score: number;
+  missing_structural_gaps: string[];
+}
+
 interface InterviewSessionTranscript {
   id: string;
   role: string;
@@ -70,6 +85,7 @@ interface InterviewSessionTranscript {
   strengths?: string[];
   weaknesses?: string[];
   targeted_recommendations?: string[];
+  star_analysis?: StarAnalysis;
   messages: TranscriptMessage[];
   privacy_settings: {
     saveAudioReplays: boolean;
@@ -148,6 +164,18 @@ export default function FeedbackHubPage() {
                   strengths: feedbackReport?.strengths || ["Clear architectural vocabulary", "Confident technical articulation"],
                   weaknesses: feedbackReport?.weaknesses || ["Could proactively detail failure recovery scenarios earlier"],
                   targeted_recommendations: feedbackReport?.targeted_recommendations || ["Practice quantifying latency and throughput constraints in system design prompts."],
+                  star_analysis: feedbackReport?.star_analysis || feedbackReport?.scores?.star_analysis || {
+                    components: [
+                      { component: "Situation", status: "strong", evidence: "Described system context clearly", evaluation: "Good foundational framing." },
+                      { component: "Task", status: "strong", evidence: "Stated goals and requirements", evaluation: "Clear technical objective." },
+                      { component: "Action", status: "partial", evidence: "Mentioned implementation steps", evaluation: "Emphasize personal contributions ('I')." },
+                      { component: "Result", status: "missing", evidence: "No quantitative metrics provided", evaluation: "Add specific metrics to close out the answer." }
+                    ],
+                    quantitative_metrics_detected: false,
+                    personal_ownership_score: 82,
+                    self_reflection_score: 78,
+                    missing_structural_gaps: ["Result phase lacks quantified impact metrics"]
+                  },
                   messages: msgs.length > 0 ? msgs : [
                     {
                       id: "m1",
@@ -525,6 +553,63 @@ export default function FeedbackHubPage() {
                             </p>
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {/* STAR Method & Behavioral Storytelling Breakdown */}
+                    {selectedSession.star_analysis && (
+                      <div className="pt-3 border-t border-orange-500/10 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <Sparkles className="h-4 w-4 text-orange-500" />
+                            STAR Framework & Behavioral Storytelling Breakdown
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "text-[10px] font-bold px-2.5 py-0.5 rounded-full border",
+                              selectedSession.star_analysis.quantitative_metrics_detected
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                            )}>
+                              {selectedSession.star_analysis.quantitative_metrics_detected ? "Metrics Quantified ✓" : "Metrics Missing ⚠"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                          {selectedSession.star_analysis.components.map((comp, i) => {
+                            const statusColor = 
+                              comp.status === "strong" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400" :
+                              comp.status === "partial" ? "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400" :
+                              "bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-400";
+                            return (
+                              <div key={i} className={cn("p-3 rounded-xl border space-y-1.5", statusColor)}>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-black uppercase tracking-wider">{comp.component}</span>
+                                  <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-white/60 dark:bg-black/20">
+                                    {comp.status}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] font-medium opacity-90 line-clamp-2">{comp.evidence}</p>
+                                <p className="text-[10px] opacity-80 italic">{comp.feedback}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {selectedSession.star_analysis.missing_structural_gaps && selectedSession.star_analysis.missing_structural_gaps.length > 0 && (
+                          <div className="p-3 rounded-xl bg-orange-500/5 border border-orange-500/20 space-y-1.5 text-xs">
+                            <span className="font-bold text-orange-700 dark:text-orange-400 flex items-center gap-1.5">
+                              <AlertCircle className="h-3.5 w-3.5" />
+                              Structural Behavioral Gaps Flagged
+                            </span>
+                            <ul className="space-y-1 text-slate-700 dark:text-slate-300 list-disc list-inside">
+                              {selectedSession.star_analysis.missing_structural_gaps.map((gap, idx) => (
+                                <li key={idx}>{gap}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     )}
 
