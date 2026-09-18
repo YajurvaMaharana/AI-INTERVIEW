@@ -70,6 +70,17 @@ interface StarAnalysis {
   missing_structural_gaps: string[];
 }
 
+interface TechnicalDimensionItem {
+  dimension: string;
+  score: number;
+  feedback: string;
+}
+
+interface TechnicalDimensionScoring {
+  dimensions: TechnicalDimensionItem[];
+  average_dimension_score: number;
+}
+
 interface InterviewSessionTranscript {
   id: string;
   role: string;
@@ -86,6 +97,7 @@ interface InterviewSessionTranscript {
   weaknesses?: string[];
   targeted_recommendations?: string[];
   star_analysis?: StarAnalysis;
+  technical_dimensions?: TechnicalDimensionScoring;
   messages: TranscriptMessage[];
   privacy_settings: {
     saveAudioReplays: boolean;
@@ -175,6 +187,19 @@ export default function FeedbackHubPage() {
                     personal_ownership_score: 82,
                     self_reflection_score: 78,
                     missing_structural_gaps: ["Result phase lacks quantified impact metrics"]
+                  },
+                  technical_dimensions: feedbackReport?.technical_dimensions || feedbackReport?.scores?.technical_dimensions || {
+                    dimensions: [
+                      { dimension: "Technical Correctness", score: 88, feedback: "Sound technical fundamentals demonstrated." },
+                      { dimension: "Domain Relevance", score: 85, feedback: "Good alignment with domain expectations." },
+                      { dimension: "Conceptual Depth", score: 82, feedback: "Solid grasp of underlying primitives." },
+                      { dimension: "Logical Reasoning", score: 90, feedback: "Clear step-by-step problem breakdown." },
+                      { dimension: "Concrete Examples", score: 78, feedback: "Incorporate more production case studies." },
+                      { dimension: "Architectural Trade-offs", score: 85, feedback: "Good latency vs throughput analysis." },
+                      { dimension: "Communication Clarity", score: 92, feedback: "Professional and articulate delivery." },
+                      { dimension: "Role Alignment", score: 88, feedback: "Well suited for target seniority." }
+                    ],
+                    average_dimension_score: 86
                   },
                   messages: msgs.length > 0 ? msgs : [
                     {
@@ -610,6 +635,45 @@ export default function FeedbackHubPage() {
                             </ul>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Granular Technical Dimension Scoring Matrix */}
+                    {selectedSession.technical_dimensions && (
+                      <div className="pt-3 border-t border-orange-500/10 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <ShieldCheck className="h-4 w-4 text-orange-500" />
+                            Granular Technical Dimension Scoring Matrix
+                          </span>
+                          <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-300">
+                            Avg Dimension Score: {selectedSession.technical_dimensions.average_dimension_score}%
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                          {selectedSession.technical_dimensions.dimensions.map((dim, i) => (
+                            <div key={i} className="p-3 rounded-xl bg-white/80 dark:bg-[#181E29]/80 border border-slate-200/80 dark:border-slate-800 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                  {dim.dimension}
+                                </span>
+                                <span className="text-[11px] font-mono font-bold text-orange-600 dark:text-orange-400">
+                                  {dim.score}%
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-orange-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${Math.min(100, Math.max(0, dim.score))}%` }}
+                                />
+                              </div>
+                              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed italic">
+                                &ldquo;{dim.feedback}&rdquo;
+                              </p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 

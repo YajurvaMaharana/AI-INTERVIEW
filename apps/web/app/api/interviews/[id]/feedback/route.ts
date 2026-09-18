@@ -39,6 +39,17 @@ interface StarAnalysis {
   missing_structural_gaps: string[];
 }
 
+interface TechnicalDimensionItem {
+  dimension: string;
+  score: number;
+  feedback: string;
+}
+
+interface TechnicalDimensionScoring {
+  dimensions: TechnicalDimensionItem[];
+  average_dimension_score: number;
+}
+
 interface FeedbackPayload {
   overall_score: number;
   summary: string;
@@ -49,6 +60,7 @@ interface FeedbackPayload {
   weaknesses: string[];
   targeted_recommendations: string[];
   star_analysis: StarAnalysis;
+  technical_dimensions: TechnicalDimensionScoring;
 }
 
 async function generateEvaluationReport(
@@ -93,6 +105,19 @@ async function generateEvaluationReport(
         self_reflection_score: 50,
         missing_structural_gaps: ["Entire STAR framework missing due to unrecorded answers"]
       },
+      technical_dimensions: {
+        dimensions: [
+          { dimension: "Technical Correctness", score: 70, feedback: "No technical interaction recorded." },
+          { dimension: "Domain Relevance", score: 70, feedback: "No domain context evaluated." },
+          { dimension: "Conceptual Depth", score: 70, feedback: "No conceptual breakdown provided." },
+          { dimension: "Logical Reasoning", score: 70, feedback: "No problem-solving steps captured." },
+          { dimension: "Concrete Examples", score: 70, feedback: "No case studies presented." },
+          { dimension: "Architectural Trade-offs", score: 70, feedback: "No trade-offs discussed." },
+          { dimension: "Communication Clarity", score: 70, feedback: "No conversational data." },
+          { dimension: "Role Alignment", score: 70, feedback: "Unassessed due to early conclusion." }
+        ],
+        average_dimension_score: 70
+      }
     };
   }
 
@@ -117,11 +142,15 @@ ${jdContext}
 Here is the conversation transcript:
 ${messages.map((m) => `[${m.sender_role.toUpperCase()}]: ${m.content}`).join('\n\n')}
 
-Analyze the candidate's performance against transparent, professional rubrics and perform deep STAR (Situation, Task, Action, Result) storytelling analysis:
-1. Technical Proficiency & Accuracy (benchmarked against target JD requirements and skills)
-2. Communication & Clarity (STAR method structure, personal ownership, self-reflection)
-3. Structured Reasoning & Problem Solving (edge cases, systemic thinking)
-4. STAR Component Evaluation: Detect Situation, Task, Action, and Result. Flag missing structural gaps (e.g. strong Action but missing Result or quantitative metrics).
+Analyze the candidate's performance against transparent, professional rubrics, perform deep STAR (Situation, Task, Action, Result) storytelling analysis, and score across 8 granular technical dimensions:
+1. Technical Correctness (syntax, fundamentals, accuracy)
+2. Domain Relevance (alignment with industry/role requirements)
+3. Conceptual Depth (understanding underlying mechanisms)
+4. Logical Reasoning (step-by-step problem breakdown)
+5. Concrete Examples (use of production case studies or benchmarks)
+6. Architectural Trade-offs (latency vs throughput, consistency vs availability)
+7. Communication Clarity (conciseness, articulation, professional vocabulary)
+8. Role Alignment (readiness for target seniority: ${jdData?.seniority_level || difficulty})
 
 Return ONLY a valid JSON object matching this exact TypeScript structure with no markdown codeblocks:
 {
@@ -149,7 +178,20 @@ Return ONLY a valid JSON object matching this exact TypeScript structure with no
     "quantitative_metrics_detected": false,
     "personal_ownership_score": 85,
     "self_reflection_score": 80,
-    "missing_structural_gaps": ["Missing quantified impact in Result", "Action phase lacked team collaboration context"]
+    "missing_structural_gaps": ["Missing quantified impact in Result"]
+  },
+  "technical_dimensions": {
+    "dimensions": [
+      { "dimension": "Technical Correctness", "score": 90, "feedback": "Accurate syntax and concepts." },
+      { "dimension": "Domain Relevance", "score": 88, "feedback": "Aligned with domain needs." },
+      { "dimension": "Conceptual Depth", "score": 85, "feedback": "Showed solid understanding." },
+      { "dimension": "Logical Reasoning", "score": 92, "feedback": "Clear step-by-step logic." },
+      { "dimension": "Concrete Examples", "score": 80, "feedback": "Could include more production case studies." },
+      { "dimension": "Architectural Trade-offs", "score": 86, "feedback": "Good latency vs throughput discussion." },
+      { "dimension": "Communication Clarity", "score": 90, "feedback": "Professional and crisp articulation." },
+      { "dimension": "Role Alignment", "score": 89, "feedback": "Well suited for seniority level." }
+    ],
+    "average_dimension_score": 88
   }
 }`;
 
@@ -231,6 +273,19 @@ Return ONLY a valid JSON object matching this exact TypeScript structure with no
         "Result phase lacks quantified impact metrics",
         "Action phase could emphasize stakeholder alignment"
       ]
+    },
+    technical_dimensions: {
+      dimensions: [
+        { dimension: "Technical Correctness", score: scoreBase, feedback: "Sound technical fundamentals demonstrated." },
+        { dimension: "Domain Relevance", score: scoreBase - 2, feedback: "Good alignment with domain expectations." },
+        { dimension: "Conceptual Depth", score: scoreBase - 4, feedback: "Propose deeper exploration of underlying primitives." },
+        { dimension: "Logical Reasoning", score: scoreBase + 2, feedback: "Clear step-by-step logical breakdown." },
+        { dimension: "Concrete Examples", score: scoreBase - 6, feedback: "Incorporate production benchmarks or case studies." },
+        { dimension: "Architectural Trade-offs", score: scoreBase - 3, feedback: "Solid discussion of system design constraints." },
+        { dimension: "Communication Clarity", score: scoreBase + 4, feedback: "Professional, articulate, and well structured." },
+        { dimension: "Role Alignment", score: scoreBase, feedback: "Matches targeted seniority level well." }
+      ],
+      average_dimension_score: scoreBase - 1
     },
   };
 }
