@@ -5,6 +5,7 @@ import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { TabProvider } from "@/context/TabContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,10 +30,12 @@ export default function RootLayout({
       <body className={`${inter.className} min-h-screen transition-colors duration-200 bg-[#ECEEF2] dark:bg-[#0B0F15] text-slate-900 dark:text-slate-100`} suppressHydrationWarning>
         <ThemeProvider>
           <AuthProvider>
-            <Navbar />
-            <Suspense fallback={null}>
-              <main>{children}</main>
-            </Suspense>
+            <TabProvider>
+              <Navbar />
+              <Suspense fallback={null}>
+                <main>{children}</main>
+              </Suspense>
+            </TabProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

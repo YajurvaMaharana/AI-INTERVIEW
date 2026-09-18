@@ -9,6 +9,7 @@ import ProfileEditModal from "@/components/profile/ProfileEditModal";
 import VoiceCoachModal from "@/components/interview/VoiceCoachModal";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useTab, type TabType } from "@/context/TabContext";
 import {
   LayoutDashboard,
   Bot,
@@ -44,6 +45,7 @@ export default function AscendXNavbar({
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { activeTab, setActiveTab } = useTab();
 
   // State for mobile drawer, expandable labels, profile menu and modal
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -73,42 +75,38 @@ export default function AscendXNavbar({
   const navItems = [
     {
       name: "Dashboard",
-      href: "/dashboard",
+      tabKey: "dashboard" as TabType,
       icon: LayoutDashboard,
     },
     {
       name: "Mock Interviews",
-      href: "/interview/new",
+      tabKey: "mock-interviews" as TabType,
       icon: Bot,
     },
     {
       name: "Resume & JD Grounding",
-      href: "/resume-jd-grounding",
+      tabKey: "resume-grounding" as TabType,
       icon: FileText,
     },
     {
       name: "Voice & Speech Coach",
-      href: "/voice-coach",
+      tabKey: "voice-coach" as TabType,
       icon: AudioLines,
-      action: () => router.push("/voice-coach"),
     },
     {
       name: "Day Simulations",
-      href: "/interview/simulation",
+      tabKey: "day-simulations" as TabType,
       icon: Laptop,
-      action: () => router.push("/interview/new?mode=simulation"),
     },
     {
       name: "Insights & Trends",
-      href: "/dashboard/insights",
+      tabKey: "insights" as TabType,
       icon: TrendingUp,
-      action: () => router.push("/dashboard?view=insights"),
     },
     {
       name: "Feedback Hub",
-      href: "/feedback-hub",
+      tabKey: "feedback-hub" as TabType,
       icon: Sparkles,
-      action: () => router.push("/feedback-hub"),
     },
   ];
 
@@ -132,37 +130,25 @@ export default function AscendXNavbar({
         <div className="max-w-[1400px] mx-auto rounded-2xl sm:rounded-full bg-white/95 dark:bg-[#151922]/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/90 shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] px-3.5 sm:px-5 py-2 transition-all duration-300">
           <div className="flex items-center justify-between h-12">
             {/* Logo on the far left */}
-            <Link
-              href="/dashboard"
-              className="flex items-center transition-transform hover:scale-[1.02]"
+            <button
+              type="button"
+              onClick={() => setActiveTab("dashboard")}
+              className="flex items-center transition-transform hover:scale-[1.02] cursor-pointer bg-transparent border-none p-0"
             >
               <AscendXLogo size="md" />
-            </Link>
+            </button>
 
             {/* Desktop Navigation: Collapsible Icons & Interactive Expansion */}
             <nav className="hidden xl:flex items-center gap-1 2xl:gap-1.5 bg-slate-100/70 dark:bg-[#1C2230]/70 p-1 rounded-full border border-slate-200/60 dark:border-slate-800">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive =
-                  item.href === "/dashboard"
-                    ? pathname === "/dashboard"
-                    : item.href === "/interview/new"
-                    ? pathname.startsWith("/interview") || pathname.startsWith("/mock-interviews")
-                    : item.href === "/resume-jd-grounding"
-                    ? pathname.startsWith("/resume-jd-grounding")
-                    : pathname === item.href;
+                const isActive = activeTab === item.tabKey;
 
                 return (
                   <button
                     key={item.name}
                     type="button"
-                    onClick={() => {
-                      if (item.action) {
-                        item.action();
-                      } else if (item.href) {
-                        router.push(item.href);
-                      }
-                    }}
+                    onClick={() => setActiveTab(item.tabKey)}
                     className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ease-out cursor-pointer select-none ${
                       isActive
                         ? "bg-[#E8602E] text-white font-semibold shadow-xs"
@@ -197,7 +183,7 @@ export default function AscendXNavbar({
               <button
                 type="button"
                 onClick={() => setExpandAllLabels(!expandAllLabels)}
-                className="p-1.5 ml-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-[#283144] transition-colors"
+                className="p-1.5 ml-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-[#283144] transition-colors cursor-pointer"
                 title={
                   expandAllLabels
                     ? "Collapse Feature Labels"
@@ -362,7 +348,7 @@ export default function AscendXNavbar({
 
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive = activeTab === item.tabKey;
 
                 return (
                   <button
@@ -370,13 +356,9 @@ export default function AscendXNavbar({
                     type="button"
                     onClick={() => {
                       setIsMobileMenuOpen(false);
-                      if (item.action) {
-                        item.action();
-                      } else if (item.href) {
-                        router.push(item.href);
-                      }
+                      setActiveTab(item.tabKey);
                     }}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                       isActive
                         ? "bg-[#E8602E] text-white font-semibold"
                         : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
