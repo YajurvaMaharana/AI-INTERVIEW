@@ -1,11 +1,11 @@
+"use client";
+export const dynamic = "force-dynamic";
+
 import { Suspense } from "react";
-import type { Metadata } from "next";
+
 import SlidingAuth from "@/components/auth/SlidingAuth";
 
-export const metadata: Metadata = {
-  title: "Authentication | AscendX",
-  description: "Sign in or create your AscendX account",
-};
+
 
 export default function AuthPage() {
   return (

@@ -1,8 +1,7 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import React, { useEffect, useState } from "react";
-
-export const dynamic = "force-dynamic";
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Mic, Volume2, Sparkles, ArrowRight, ShieldCheck } from "lucide-react";

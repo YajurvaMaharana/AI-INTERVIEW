@@ -1,8 +1,8 @@
+export const dynamic = "force-dynamic";
+
 import { createClient } from "@/lib/supabase/server";
 import { getSessionsByUserId } from "@/lib/services/db.service";
 import AscendXDashboard from "@/components/dashboard/AscendXDashboard";
-
-export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   let formattedSessions: Array<{

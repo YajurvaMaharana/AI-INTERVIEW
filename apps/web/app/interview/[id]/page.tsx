@@ -1,4 +1,6 @@
 "use client";
+export const dynamic = "force-dynamic";
+
 /* eslint-disable react-hooks/exhaustive-deps */
 
 import * as React from "react";
@@ -255,7 +257,7 @@ export default function InterviewPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col bg-[#ECEEF2] dark:bg-[#0B0F15] transition-colors duration-300">
+    <div className="flex h-screen w-full flex-col bg-[#ECEEF2] dark:bg-[#0B0F15] transition-colors duration-300 overflow-hidden">
       {/* ── Top Session Header ── */}
       <header className="flex shrink-0 items-center justify-between border-b border-slate-200/80 dark:border-[#222B3A] bg-white/80 dark:bg-[#151922]/80 px-4 py-3 backdrop-blur-md sm:px-6">
         <div className="flex items-center gap-3">

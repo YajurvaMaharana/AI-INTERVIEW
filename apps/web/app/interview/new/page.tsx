@@ -1,14 +1,13 @@
-import type { Metadata } from "next";
+"use client";
+export const dynamic = "force-dynamic";
+
+
 import Link from "next/link";
 import React, { Suspense } from "react";
 import { ArrowLeft, Sparkles, Loader2 } from "lucide-react";
 import SetupForm from "@/components/interview/SetupForm";
 
-export const metadata: Metadata = {
-  title: "Set Up Your Interview | AscendX",
-  description:
-    "Configure your mock interview session — choose type, role, and difficulty to get started with AscendX AI.",
-};
+
 
 export default function NewInterviewPage() {
   return (

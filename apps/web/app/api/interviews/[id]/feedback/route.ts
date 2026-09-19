@@ -76,49 +76,48 @@ async function generateEvaluationReport(
   const modelName = resolveGeminiModel();
 
   const userAnswers = messages.filter((m) => m.sender_role === 'user');
-  if (userAnswers.length === 0) {
+  if (userAnswers.length === 0 || !messages || messages.length === 0) {
     return {
-      overall_score: 70,
-      summary: `Initial practice session for ${role}${jdData?.company_name ? ` at ${jdData.company_name}` : ''}. No candidate responses were recorded before concluding. Practice answering questions out loud using the STAR method for behavioral roles or explaining architectural trade-offs for technical interviews.`,
+      overall_score: 0,
+      summary: `Incomplete / No Answers Provided: The interview session for ${role}${jdData?.company_name ? ` at ${jdData.company_name}` : ''} concluded without any recorded candidate responses or substantive dialogue.`,
       categories: [
-        { label: 'Technical Proficiency & Accuracy', score: 70, comment: 'Session concluded before detailed technical questions were answered.', rubric_level: 'Developing' },
-        { label: 'Communication & Clarity', score: 70, comment: 'Prepare clear, structured responses for next session.', rubric_level: 'Developing' },
-        { label: 'Structured Reasoning & Trade-offs', score: 70, comment: 'Try answering at least 3-4 interview questions to get an in-depth score.', rubric_level: 'Developing' },
+        { label: 'Technical Proficiency & Accuracy', score: 0, comment: 'No candidate responses were recorded during this session.', rubric_level: 'Incomplete' },
+        { label: 'Communication & Clarity', score: 0, comment: 'No candidate responses were recorded during this session.', rubric_level: 'Incomplete' },
+        { label: 'Structured Reasoning & Trade-offs', score: 0, comment: 'No candidate responses were recorded during this session.', rubric_level: 'Incomplete' },
       ],
       evidence: [
-        { claim: 'Candidate participation', transcriptQuote: 'No responses recorded', evaluation: 'Session concluded early before substantive dialogue.' }
+        { claim: 'Candidate participation', transcriptQuote: 'No responses recorded', evaluation: 'No candidate answers submitted.' }
       ],
-      missing_key_elements: ['Complete conversational exchanges', 'Provide technical architecture breakdown', 'Articulate trade-offs'],
-      strengths: ['Initiated practice session for targeted role', 'Selected appropriate difficulty level'],
-      weaknesses: ['Insufficient conversational telemetry captured', 'Lack of detailed technical depth exploration'],
+      missing_key_elements: ['Complete conversational exchanges', 'Technical answers', 'STAR methodology application'],
+      strengths: ['Initialized practice session'],
+      weaknesses: ['Incomplete session - zero answers submitted'],
       targeted_recommendations: [
-        'Complete at least 3 conversational exchanges to receive comprehensive behavioral and technical rubric scores',
-        'Use the STAR method (Situation, Task, Action, Result) when framing experience',
+        'Complete at least 3-5 conversational responses during your next interview session to receive a fully calibrated rubric evaluation.',
       ],
       star_analysis: {
         components: [
-          { component: "Situation", status: "missing", evidence: "None recorded", feedback: "No context provided." },
-          { component: "Task", status: "missing", evidence: "None recorded", feedback: "No specific objective defined." },
-          { component: "Action", status: "missing", evidence: "None recorded", feedback: "No personal actions outlined." },
-          { component: "Result", status: "missing", evidence: "None recorded", feedback: "No outcome or metrics provided." }
+          { component: "Situation", status: "missing", evidence: "No responses provided", feedback: "Incomplete session." },
+          { component: "Task", status: "missing", evidence: "No responses provided", feedback: "Incomplete session." },
+          { component: "Action", status: "missing", evidence: "No responses provided", feedback: "Incomplete session." },
+          { component: "Result", status: "missing", evidence: "No responses provided", feedback: "Incomplete session." }
         ],
         quantitative_metrics_detected: false,
-        personal_ownership_score: 50,
-        self_reflection_score: 50,
-        missing_structural_gaps: ["Entire STAR framework missing due to unrecorded answers"]
+        personal_ownership_score: 0,
+        self_reflection_score: 0,
+        missing_structural_gaps: ["No answers submitted - session incomplete"]
       },
       technical_dimensions: {
         dimensions: [
-          { dimension: "Technical Correctness", score: 70, feedback: "No technical interaction recorded." },
-          { dimension: "Domain Relevance", score: 70, feedback: "No domain context evaluated." },
-          { dimension: "Conceptual Depth", score: 70, feedback: "No conceptual breakdown provided." },
-          { dimension: "Logical Reasoning", score: 70, feedback: "No problem-solving steps captured." },
-          { dimension: "Concrete Examples", score: 70, feedback: "No case studies presented." },
-          { dimension: "Architectural Trade-offs", score: 70, feedback: "No trade-offs discussed." },
-          { dimension: "Communication Clarity", score: 70, feedback: "No conversational data." },
-          { dimension: "Role Alignment", score: 70, feedback: "Unassessed due to early conclusion." }
+          { dimension: "Technical Correctness", score: 0, feedback: "No answers provided." },
+          { dimension: "Domain Relevance", score: 0, feedback: "No answers provided." },
+          { dimension: "Conceptual Depth", score: 0, feedback: "No answers provided." },
+          { dimension: "Logical Reasoning", score: 0, feedback: "No answers provided." },
+          { dimension: "Concrete Examples", score: 0, feedback: "No answers provided." },
+          { dimension: "Architectural Trade-offs", score: 0, feedback: "No answers provided." },
+          { dimension: "Communication Clarity", score: 0, feedback: "No answers provided." },
+          { dimension: "Role Alignment", score: 0, feedback: "No answers provided." }
         ],
-        average_dimension_score: 70
+        average_dimension_score: 0
       }
     };
   }

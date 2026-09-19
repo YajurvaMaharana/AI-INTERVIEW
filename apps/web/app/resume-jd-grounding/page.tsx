@@ -1,15 +1,12 @@
+export const dynamic = "force-dynamic";
+
 import React from "react";
-import type { Metadata } from "next";
+
 import GapAnalysisView from "@/components/grounding/GapAnalysisView";
 import { createClient } from "@/lib/supabase/server";
 import { getUserById } from "@/lib/services/db.service";
 
-export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Resume & JD Grounding | AscendX AI Mock Interview",
-  description: "Competency Gap Analysis and AI Interviewer Grounding Matrix comparing verified candidate projects against target job descriptions.",
-};
 
 export default async function ResumeJdGroundingPage() {
   let initialResume = null;

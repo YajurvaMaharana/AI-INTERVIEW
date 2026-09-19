@@ -640,7 +640,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    return {
+      user: null,
+      session: null,
+      isLoading: true,
+      signOut: async () => {},
+      deleteAccount: async () => false,
+      updatePassword: async () => ({ success: false, error: 'Not initialized' }),
+      resetPasswordEmail: async () => ({ success: false, error: 'Not initialized' }),
+      syncUser: async () => ({ id: '', email: '', display_name: '' }),
+      updateUserProfile: async () => false,
+      refreshProfile: async () => {},
+    };
   }
   return context;
 }

@@ -27,6 +27,7 @@ import {
   Flame,
   MessageSquare,
   Compass,
+  UploadCloud,
 } from "lucide-react";
 import {
   interviewSetupSchema,
@@ -202,7 +203,7 @@ async function createInterview(
 export default function SetupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, refreshProfile, updateUserProfile } = useAuth();
   const initialPersonaParam = searchParams.get("persona") as PersonaId | null;
   const initialModeParam = searchParams.get("mode") as string | null;
 
@@ -215,6 +216,96 @@ export default function SetupForm() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [parsedJD, setParsedJD] = useState<JobDescriptionParsedData | null>(null);
   const [jdRawText, setJdRawText] = useState<string>("");
+
+  // Manual override state
+  const [showOverride, setShowOverride] = useState(false);
+  const [overrideText, setOverrideText] = useState("");
+  const [isUploadingOverride, setIsUploadingOverride] = useState(false);
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+  const overrideFileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  // Auto-fetch profile resume on load
+  useEffect(() => {
+    if (refreshProfile) {
+      refreshProfile().catch(() => {});
+    }
+  }, [refreshProfile]);
+
+  const handleOverrideUpload = async (file: File) => {
+    if (!file) return;
+    setOverrideError(null);
+    setIsUploadingOverride(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (user?.id) {
+        formData.append("userId", user.id);
+      }
+      const res = await fetch("/api/user/resume/parse", {
+        method: "POST",
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || "Failed to parse resume");
+      }
+      if (updateUserProfile && json.resumeData) {
+        await updateUserProfile({
+          resume_url: json.resumeUrl,
+          resume_filename: json.fileName,
+          resume_parsed_at: json.parsedAt,
+          resume_data: json.resumeData,
+          target_role: json.resumeData.headline || currentRole,
+        });
+      }
+      if (refreshProfile) await refreshProfile();
+      setShowOverride(false);
+    } catch (err: any) {
+      setOverrideError(err?.message || "Failed to upload resume");
+    } finally {
+      setIsUploadingOverride(false);
+    }
+  };
+
+  const handleOverridePaste = async () => {
+    if (!overrideText.trim() || overrideText.length < 30) {
+      setOverrideError("Please paste at least 30 characters of resume text.");
+      return;
+    }
+    setOverrideError(null);
+    setIsUploadingOverride(true);
+    try {
+      const res = await fetch("/api/user/resume/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rawText: overrideText,
+          userId: user?.id,
+          filename: "Pasted_Resume.txt",
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || "Failed to parse pasted resume");
+      }
+      if (updateUserProfile && json.resumeData) {
+        await updateUserProfile({
+          resume_url: json.resumeUrl,
+          resume_filename: json.fileName,
+          resume_parsed_at: json.parsedAt,
+          resume_data: json.resumeData,
+          target_role: json.resumeData.headline || currentRole,
+        });
+      }
+      if (refreshProfile) await refreshProfile();
+      setOverrideText("");
+      setShowOverride(false);
+    } catch (err: any) {
+      setOverrideError(err?.message || "Failed to parse pasted resume");
+    } finally {
+      setIsUploadingOverride(false);
+    }
+  };
 
   const defaultRole = (user as any)?.target_role || resumeData?.headline || "Senior Full-Stack Engineer";
 
@@ -314,48 +405,154 @@ export default function SetupForm() {
           </div>
         </div>
 
-        {/* ── Resume Grounding Context Banner ── */}
-        {resumeData ? (
-          <div className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800/60 animate-in fade-in duration-200">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
-                <FileCheck className="w-5 h-5" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">
-                    Resume Grounded: {resumeFilename || "Candidate Profile Active"}
-                  </span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                    Claims & Metrics Calibrated
-                  </span>
+        {/* ── Resume Grounding Context Banner & Mandatory Guardrail ── */}
+        <div className="space-y-3">
+          {resumeData ? (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800/60 animate-in fade-in duration-200">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                  <FileCheck className="w-5 h-5" />
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                  Questions will reference your verified projects, technical stack, and audited resume claims.
-                </p>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      Resume Grounded: {resumeFilename || "Candidate Profile Active"}
+                    </span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                      Claims & Metrics Calibrated
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    {resumeData.headline || "Questions will reference your verified projects, technical stack, and audited resume claims."}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowOverride(!showOverride)}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white dark:bg-[#1C2230] text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 transition-colors"
+                >
+                  {showOverride ? "Close Override" : "Override / Update Resume"}
+                </button>
+                <Link
+                  href="/resume-jd-grounding"
+                  className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline px-2"
+                >
+                  View Claims
+                </Link>
               </div>
             </div>
-            <Link
-              href="/resume-jd-grounding"
-              className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0"
-            >
-              View Claims
-            </Link>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-100/80 dark:bg-[#1C2230]/60 border border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
-              <SparklesIcon className="w-4 h-4 text-[#E8602E]" />
-              <span>Want questions calibrated to your specific projects and verifiable claims?</span>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold block">
+                    Resume Required: No Profile Resume Found
+                  </span>
+                  <p className="text-[11px] opacity-90">
+                    AscendX requires a grounded resume to tailor technical and behavioral questions. Please upload or paste your resume below.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOverride(!showOverride)}
+                className="text-xs font-bold px-3.5 py-1.5 rounded-xl bg-amber-600 text-white hover:bg-amber-700 transition-colors shrink-0"
+              >
+                {showOverride ? "Close Form" : "Upload / Paste Resume"}
+              </button>
             </div>
-            <Link
-              href="/resume-jd-grounding"
-              className="text-xs font-bold text-[#E8602E] hover:text-[#d85322] hover:underline shrink-0"
-            >
-              Upload Resume & JD
-            </Link>
-          </div>
-        )}
+          )}
+
+          {/* Manual Override & Upload/Paste Panel */}
+          {showOverride && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#1C2230] border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in duration-200 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  <UploadCloud className="w-4 h-4 text-[#E8602E]" />
+                  <span>Manual Resume Override & Grounding</span>
+                </h3>
+                <span className="text-[11px] text-slate-500">
+                  Upload PDF or paste text to update profile
+                </span>
+              </div>
+
+              {overrideError && (
+                <div className="p-3 rounded-xl bg-rose-500/10 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{overrideError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* File Upload Box */}
+                <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-[#E8602E] rounded-xl p-4 text-center flex flex-col items-center justify-center space-y-2 cursor-pointer transition-colors bg-slate-50/50 dark:bg-slate-900/40">
+                  <input
+                    ref={overrideFileInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleOverrideUpload(file);
+                    }}
+                  />
+                  <div className="w-9 h-9 rounded-full bg-[#E8602E]/10 text-[#E8602E] flex items-center justify-center">
+                    {isUploadingOverride ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <UploadCloud className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      Upload PDF Resume
+                    </p>
+                    <p className="text-[10px] text-slate-500">Max 10MB • Auto-parsed by Gemini 3.8 Flash</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isUploadingOverride}
+                    onClick={() => overrideFileInputRef.current?.click()}
+                    className="px-3 py-1.5 rounded-lg bg-[#E8602E] text-white text-xs font-semibold hover:bg-[#d85322] transition-colors"
+                  >
+                    Select PDF
+                  </button>
+                </div>
+
+                {/* Paste Text Box */}
+                <div className="flex flex-col space-y-2">
+                  <textarea
+                    rows={4}
+                    value={overrideText}
+                    onChange={(e) => setOverrideText(e.target.value)}
+                    placeholder="Or paste resume raw text here (include work history, tech stack, and achievements)..."
+                    className="w-full p-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#E8602E]/30 focus:border-[#E8602E] resize-none"
+                  />
+                  <button
+                    type="button"
+                    disabled={isUploadingOverride || !overrideText.trim()}
+                    onClick={handleOverridePaste}
+                    className="w-full py-2 rounded-xl bg-slate-800 dark:bg-slate-700 text-white text-xs font-bold hover:bg-slate-900 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isUploadingOverride ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Parsing & Grounding...</span>
+                      </>
+                    ) : (
+                      <span>Parse & Ground Pasted Text</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* ── Error Banner ── */}
         {serverError && (
@@ -720,14 +917,19 @@ export default function SetupForm() {
           {/* 7. PRIMARY ACTION BUTTON & SUMMARY                        */}
           {/* ========================================================= */}
           <div className="pt-2 space-y-3">
+            {!resumeData && (
+              <p className="text-xs font-bold text-amber-700 dark:text-amber-400 text-center animate-pulse">
+                ⚠️ Resume Required: Please upload or paste your resume above to enable interview calibration.
+              </p>
+            )}
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !resumeData}
               className={cn(
                 "w-full group relative flex items-center justify-center gap-3 py-4 px-6 rounded-2xl",
-                "bg-gradient-to-r from-[#E8602E] to-[#F17E45] hover:from-[#d85322] hover:to-[#e07038]",
-                "text-white font-bold text-base shadow-[0_6px_24px_rgba(232,96,46,0.38)] dark:shadow-[0_6px_28px_rgba(232,96,46,0.45)]",
-                "transition-all duration-200 active:scale-[0.99] cursor-pointer",
+                !resumeData
+                  ? "bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed shadow-none"
+                  : "bg-gradient-to-r from-[#E8602E] to-[#F17E45] hover:from-[#d85322] hover:to-[#e07038] text-white font-bold text-base shadow-[0_6px_24px_rgba(232,96,46,0.38)] dark:shadow-[0_6px_28px_rgba(232,96,46,0.45)] cursor-pointer active:scale-[0.99]",
                 "disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
               )}
             >
@@ -735,6 +937,11 @@ export default function SetupForm() {
                 <>
                   <Loader2 className="w-5 h-5 animate-spin text-white" />
                   <span>Calibrating AI Interview Session...</span>
+                </>
+              ) : !resumeData ? (
+                <>
+                  <AlertCircle className="w-5 h-5 text-slate-400 shrink-0" />
+                  <span>Resume Required to Start Interview</span>
                 </>
               ) : (
                 <>

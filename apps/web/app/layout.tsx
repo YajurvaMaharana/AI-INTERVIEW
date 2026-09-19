@@ -27,6 +27,34 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener('error', function(e) {
+                var msg = e && (e.message || (e.target && e.target.src));
+                if (msg && (String(msg).includes('Loading chunk') || String(msg).includes('ChunkLoadError') || String(msg).includes('error.js'))) {
+                  var key = 'ascendx_chunk_reload_' + window.location.pathname;
+                  if (!sessionStorage.getItem(key)) {
+                    sessionStorage.setItem(key, 'true');
+                    window.location.reload();
+                  }
+                }
+              }, true);
+              window.addEventListener('unhandledrejection', function(e) {
+                var reason = e && e.reason ? (e.reason.message || String(e.reason)) : '';
+                if (reason.includes('Loading chunk') || reason.includes('ChunkLoadError')) {
+                  var key = 'ascendx_chunk_reload_' + window.location.pathname;
+                  if (!sessionStorage.getItem(key)) {
+                    sessionStorage.setItem(key, 'true');
+                    window.location.reload();
+                  }
+                }
+              });
+            `,
+          }}
+        />
+      </head>
       <body className={`${inter.className} min-h-screen transition-colors duration-200 bg-[#ECEEF2] dark:bg-[#0B0F15] text-slate-900 dark:text-slate-100`} suppressHydrationWarning>
         <ThemeProvider>
           <AuthProvider>
