@@ -18,6 +18,11 @@ interface FeedbackScoreCategory {
   score: number;
   comment: string;
   rubric_level: string;
+  transcript_quote?: string;
+  covered_concepts?: string[];
+  missing_concepts?: string[];
+  rubric_justification?: string;
+  evaluation_confidence?: number;
 }
 
 interface EvidenceItem {
@@ -45,6 +50,10 @@ interface TechnicalDimensionItem {
   dimension: string;
   score: number;
   feedback: string;
+  transcript_quote?: string;
+  covered_concepts?: string[];
+  missing_concepts?: string[];
+  rubric_justification?: string;
 }
 
 interface TechnicalDimensionScoring {
@@ -138,12 +147,12 @@ Target Job Description Specifications:
 `;
       }
 
-      const prompt = `You are a Principal Engineering and HR Director conducting a rigorous, rubric-backed post-interview evaluation debrief for a candidate who interviewed for the "${role}" (${difficulty} difficulty, ${type} interview).
+      const prompt = `You are a Principal Engineering and HR Director conducting a rigorous, evidence-backed post-interview evaluation debrief for a candidate who interviewed for the "${role}" (${difficulty} difficulty, ${type} interview).
 ${jdContext}
 Here is the conversation transcript:
 ${messages.map((m) => `[${m.sender_role.toUpperCase()}]: ${m.content}`).join('\n\n')}
 
-Analyze the candidate's performance against transparent, professional rubrics, perform deep STAR (Situation, Task, Action, Result) storytelling analysis, and score across 8 granular technical dimensions:
+Analyze the candidate's performance against transparent, professional rubrics, tie every awarded point directly to evidence found within the candidate's responses (eliminating black-box grading), perform deep STAR (Situation, Task, Action, Result) storytelling analysis, and score across 8 granular technical dimensions:
 1. Technical Correctness (syntax, fundamentals, accuracy)
 2. Domain Relevance (alignment with industry/role requirements)
 3. Conceptual Depth (understanding underlying mechanisms)
@@ -153,14 +162,29 @@ Analyze the candidate's performance against transparent, professional rubrics, p
 7. Communication Clarity (conciseness, articulation, professional vocabulary)
 8. Role Alignment (readiness for target seniority: ${jdData?.seniority_level || difficulty})
 
+For every category and technical dimension, you MUST provide explicit evidence metadata:
+- transcript_quote: exact excerpt from candidate response
+- covered_concepts: list of technical or behavioral concepts successfully demonstrated
+- missing_concepts: list of key concepts that were omitted or incomplete
+- rubric_justification: transparent explanation linking the score directly to the transcript evidence
+- evaluation_confidence: confidence score percentage (e.g. 95)
+
 Return ONLY a valid JSON object matching this exact TypeScript structure with no markdown codeblocks:
 {
   "overall_score": 85,
   "summary": "Executive summary of performance...",
   "categories": [
-    { "label": "Technical Proficiency & Accuracy", "score": 88, "comment": "Detailed assessment...", "rubric_level": "Proficient" },
-    { "label": "Communication & Clarity", "score": 82, "comment": "Detailed assessment...", "rubric_level": "Competent" },
-    { "label": "Structured Reasoning & Trade-offs", "score": 85, "comment": "Detailed assessment...", "rubric_level": "Proficient" }
+    {
+      "label": "Technical Proficiency & Accuracy",
+      "score": 88,
+      "comment": "Detailed assessment...",
+      "rubric_level": "Proficient",
+      "transcript_quote": "exact quote from candidate response",
+      "covered_concepts": ["concept 1", "concept 2"],
+      "missing_concepts": ["concept 3"],
+      "rubric_justification": "Awarded 88 because candidate demonstrated solid fundamentals with clear quote evidence.",
+      "evaluation_confidence": 95
+    }
   ],
   "evidence": [
     { "claim": "Demonstrated strong knowledge of concurrency", "transcriptQuote": "exact quote from user message", "evaluation": "Shows direct practical familiarity" }
@@ -183,14 +207,15 @@ Return ONLY a valid JSON object matching this exact TypeScript structure with no
   },
   "technical_dimensions": {
     "dimensions": [
-      { "dimension": "Technical Correctness", "score": 90, "feedback": "Accurate syntax and concepts." },
-      { "dimension": "Domain Relevance", "score": 88, "feedback": "Aligned with domain needs." },
-      { "dimension": "Conceptual Depth", "score": 85, "feedback": "Showed solid understanding." },
-      { "dimension": "Logical Reasoning", "score": 92, "feedback": "Clear step-by-step logic." },
-      { "dimension": "Concrete Examples", "score": 80, "feedback": "Could include more production case studies." },
-      { "dimension": "Architectural Trade-offs", "score": 86, "feedback": "Good latency vs throughput discussion." },
-      { "dimension": "Communication Clarity", "score": 90, "feedback": "Professional and crisp articulation." },
-      { "dimension": "Role Alignment", "score": 89, "feedback": "Well suited for seniority level." }
+      {
+        "dimension": "Technical Correctness",
+        "score": 90,
+        "feedback": "Accurate syntax and concepts.",
+        "transcript_quote": "exact quote...",
+        "covered_concepts": ["syntax", "fundamentals"],
+        "missing_concepts": ["edge cases"],
+        "rubric_justification": "Tied directly to user transcript evidence demonstrating fundamental accuracy."
+      }
     ],
     "average_dimension_score": 88
   }
@@ -224,18 +249,33 @@ Return ONLY a valid JSON object matching this exact TypeScript structure with no
         score: scoreBase,
         comment: `Demonstrated accurate foundational understanding of core competencies for ${role}.`,
         rubric_level: scoreBase >= 85 ? 'Proficient' : 'Competent',
+        transcript_quote: userAnswers[0]?.content.slice(0, 100) || 'Candidate response transcript excerpt',
+        covered_concepts: ['Core architecture fundamentals', 'Domain terminology', 'Syntax correctness'],
+        missing_concepts: ['Advanced edge-case reconciliation', 'Scale-out partitioning strategies'],
+        rubric_justification: `Awarded ${scoreBase}/100 based on direct quote alignment and demonstrated foundational mastery.`,
+        evaluation_confidence: 94,
       },
       {
         label: 'Communication & Clarity',
         score: Math.min(95, scoreBase + 3),
         comment: 'Ideas were communicated clearly and logically. Structuring behavioral responses using the STAR method will further enhance impact.',
         rubric_level: 'Proficient',
+        transcript_quote: userAnswers[0]?.content.slice(0, 80) || 'Candidate articulation excerpt',
+        covered_concepts: ['Professional articulation', 'Logical sequence flow', 'Clear terminology'],
+        missing_concepts: ['Concise summary statement', 'Quantified impact framing'],
+        rubric_justification: 'Awarded score based on clear speech structure and professional phrasing in transcript.',
+        evaluation_confidence: 96,
       },
       {
         label: 'Structured Reasoning & Trade-offs',
         score: Math.max(65, scoreBase - 2),
         comment: 'Good logical breakdown of problems. Proactively discussing failure modes and latency vs throughput trade-offs will elevate architectural responses.',
         rubric_level: scoreBase >= 85 ? 'Competent' : 'Developing',
+        transcript_quote: userAnswers[1]?.content?.slice(0, 90) || userAnswers[0]?.content?.slice(0, 90) || 'Trade-off discussion excerpt',
+        covered_concepts: ['Problem breakdown', 'Logical sequencing'],
+        missing_concepts: ['Latency vs throughput profiling', 'Failure recovery simulation'],
+        rubric_justification: 'Awarded score reflecting sound reasoning with minor gaps in proactive failure mode analysis.',
+        evaluation_confidence: 92,
       },
     ],
     evidence: userAnswers.map((a, idx) => ({

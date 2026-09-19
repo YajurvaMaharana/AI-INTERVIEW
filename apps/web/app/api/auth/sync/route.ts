@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { syncUserToDatabase } from '@/lib/services/db.service';
 import { createClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));

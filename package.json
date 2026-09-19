@@ -6,18 +6,12 @@
     "apps/web"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspace=apps/web",
+    "start": "npm run start --workspace=apps/web",
+    "dev": "npm run dev --workspace=apps/web",
     "lint": "npm run lint --workspace=apps/web"
   },
-  "devDependencies": {
-    "turbo": "^2.10.7"
-  },
-  "engines": {
-    "node": ">=18"
-  },
   "dependencies": {
-    "typescript": "^5.7.3",
-    "@google/genai": "^2.22.0"
+    "@google/genai": "^2.23.0"
   }
 }

@@ -21,6 +21,27 @@ interface FeedbackCategory {
   label: string;
   score: number;
   comment: string;
+  rubric_level?: string;
+  transcript_quote?: string;
+  covered_concepts?: string[];
+  missing_concepts?: string[];
+  rubric_justification?: string;
+  evaluation_confidence?: number;
+}
+
+interface TechnicalDimensionItem {
+  dimension: string;
+  score: number;
+  feedback: string;
+  transcript_quote?: string;
+  covered_concepts?: string[];
+  missing_concepts?: string[];
+  rubric_justification?: string;
+}
+
+interface TechnicalDimensionScoring {
+  dimensions: TechnicalDimensionItem[];
+  average_dimension_score: number;
 }
 
 interface FeedbackReportData {
@@ -31,7 +52,9 @@ interface FeedbackReportData {
     categories?: FeedbackCategory[];
     strengths?: string[];
     improvements?: string[];
+    technical_dimensions?: TechnicalDimensionScoring;
   };
+  technical_dimensions?: TechnicalDimensionScoring;
   summary: string;
   created_at: string;
 }
@@ -43,6 +66,11 @@ export default function FeedbackPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [report, setReport] = React.useState<FeedbackReportData | null>(null);
+  const [expandedEvidence, setExpandedEvidence] = React.useState<Record<string, boolean>>({});
+
+  const toggleEvidence = (key: string) => {
+    setExpandedEvidence((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   React.useEffect(() => {
     let isMounted = true;
@@ -87,6 +115,7 @@ export default function FeedbackPage() {
   const categories = report?.scores?.categories || [];
   const strengths = report?.scores?.strengths || [];
   const improvements = report?.scores?.improvements || [];
+  const technicalDimensions = report?.technical_dimensions || report?.scores?.technical_dimensions;
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background py-8 px-4 sm:px-6 lg:px-8">
@@ -201,32 +230,168 @@ export default function FeedbackPage() {
               {/* Rubric Categories */}
               {categories.length > 0 && (
                 <CardContent className="p-6 sm:p-8 space-y-6">
-                  <h3 className="text-base font-semibold">Competency Breakdown</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold">Competency Breakdown & Evidence Justification</h3>
+                    <span className="text-xs text-muted-foreground">Click card to toggle transcript evidence</span>
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {categories.map((cat, idx) => (
-                      <div
-                        key={idx}
-                        className="rounded-xl border border-border/70 bg-card p-4 space-y-2 shadow-2xs"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {cat.label}
-                          </span>
-                          <span className="text-sm font-bold text-primary">
-                            {cat.score}%
-                          </span>
+                    {categories.map((cat, idx) => {
+                      const key = `cat-${idx}`;
+                      const isExpanded = expandedEvidence[key];
+                      return (
+                        <div
+                          key={idx}
+                          className="rounded-xl border border-border/70 bg-card p-4 space-y-3 shadow-2xs transition-all"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {cat.label}
+                            </span>
+                            <span className="text-sm font-bold text-primary">
+                              {cat.score}%
+                            </span>
+                          </div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full bg-primary rounded-full transition-all duration-500"
+                              style={{ width: `${Math.min(100, Math.max(10, cat.score))}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {cat.comment}
+                          </p>
+
+                          {/* Toggle Evidence Button */}
+                          <button
+                            type="button"
+                            onClick={() => toggleEvidence(key)}
+                            className="w-full mt-2 pt-2 border-t border-border/60 text-xs font-semibold text-primary flex items-center justify-between hover:underline cursor-pointer"
+                          >
+                            <span>{isExpanded ? "Hide Evidence & Justification" : "View Evidence & Justification"}</span>
+                            <span>{isExpanded ? "▲" : "▼"}</span>
+                          </button>
+
+                          {/* Expandable Evidence Panel */}
+                          {isExpanded && (
+                            <div className="mt-2 p-3 rounded-lg bg-muted/60 border border-border/80 space-y-2 text-xs animate-fade-in">
+                              {cat.transcript_quote && (
+                                <div className="space-y-1">
+                                  <span className="font-bold text-[11px] text-foreground uppercase tracking-wider">Exact Transcript Excerpt:</span>
+                                  <p className="italic text-muted-foreground bg-card/80 p-2 rounded border border-border/40">
+                                    &ldquo;{cat.transcript_quote}&rdquo;
+                                  </p>
+                                </div>
+                              )}
+
+                              {cat.covered_concepts && cat.covered_concepts.length > 0 && (
+                                <div className="space-y-1">
+                                  <span className="font-bold text-[11px] text-emerald-600 dark:text-emerald-400">Covered Concepts:</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {cat.covered_concepts.map((c, i) => (
+                                      <span key={i} className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[10px] font-medium">
+                                        ✓ {c}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {cat.missing_concepts && cat.missing_concepts.length > 0 && (
+                                <div className="space-y-1">
+                                  <span className="font-bold text-[11px] text-amber-600 dark:text-amber-400">Missing Key Concepts:</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {cat.missing_concepts.map((c, i) => (
+                                      <span key={i} className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[10px] font-medium">
+                                        ⚠ {c}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {cat.rubric_justification && (
+                                <div className="space-y-1">
+                                  <span className="font-bold text-[11px] text-foreground">Rubric Justification:</span>
+                                  <p className="text-muted-foreground leading-relaxed">{cat.rubric_justification}</p>
+                                </div>
+                              )}
+
+                              {cat.evaluation_confidence && (
+                                <div className="flex items-center justify-between pt-1 font-mono text-[10px] text-muted-foreground border-t border-border/40">
+                                  <span>Evaluation Confidence:</span>
+                                  <span className="font-bold text-primary">{cat.evaluation_confidence}%</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(100, Math.max(10, cat.score))}%` }}
-                          />
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              )}
+
+              {/* Granular Technical Dimensions Scoring Matrix */}
+              {technicalDimensions && technicalDimensions.dimensions && technicalDimensions.dimensions.length > 0 && (
+                <CardContent className="p-6 sm:p-8 pt-0 space-y-6 border-t border-border/60">
+                  <div className="flex items-center justify-between pt-6">
+                    <h3 className="text-base font-semibold">Granular Technical Dimension Scoring Matrix</h3>
+                    <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-primary/10 text-primary">
+                      Avg Dimension Score: {technicalDimensions.average_dimension_score}%
+                    </span>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {technicalDimensions.dimensions.map((dim, idx) => {
+                      const key = `dim-${idx}`;
+                      const isExpanded = expandedEvidence[key];
+                      return (
+                        <div
+                          key={idx}
+                          className="rounded-xl border border-border/70 bg-card p-4 space-y-2 shadow-2xs"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-muted-foreground truncate">
+                              {dim.dimension}
+                            </span>
+                            <span className="text-sm font-bold text-primary font-mono">
+                              {dim.score}%
+                            </span>
+                          </div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full bg-primary rounded-full transition-all duration-500"
+                              style={{ width: `${Math.min(100, Math.max(10, dim.score))}%` }}
+                            />
+                          </div>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed italic pt-1">
+                            &ldquo;{dim.feedback}&rdquo;
+                          </p>
+
+                          {/* Toggle Dimension Evidence */}
+                          <button
+                            type="button"
+                            onClick={() => toggleEvidence(key)}
+                            className="w-full mt-2 pt-2 border-t border-border/60 text-xs font-semibold text-primary flex items-center justify-between hover:underline cursor-pointer"
+                          >
+                            <span>{isExpanded ? "Hide Evidence" : "View Evidence"}</span>
+                            <span>{isExpanded ? "▲" : "▼"}</span>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="mt-2 p-3 rounded-lg bg-muted/60 border border-border/80 space-y-2 text-xs">
+                              {dim.transcript_quote && (
+                                <p className="italic text-muted-foreground bg-card/80 p-2 rounded border border-border/40">
+                                  &ldquo;{dim.transcript_quote}&rdquo;
+                                </p>
+                              )}
+                              {dim.rubric_justification && (
+                                <p className="text-muted-foreground">{dim.rubric_justification}</p>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed pt-1">
-                          {cat.comment}
-                        </p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               )}
