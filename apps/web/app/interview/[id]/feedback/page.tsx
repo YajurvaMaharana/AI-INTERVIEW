@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface FeedbackCategory {
   label: string;
@@ -44,6 +45,21 @@ interface TechnicalDimensionScoring {
   average_dimension_score: number;
 }
 
+interface ConceptEvaluation {
+  concept: string;
+  covered: boolean;
+  similarity: number;
+  evidenceSnippet?: string;
+}
+
+interface EmbeddingRelevanceData {
+  embeddingScore: number;
+  hybridScore: number;
+  concepts: ConceptEvaluation[];
+  averageSimilarity: number;
+  explanation: string;
+}
+
 interface FeedbackReportData {
   id: string;
   session_id: string;
@@ -55,6 +71,7 @@ interface FeedbackReportData {
     technical_dimensions?: TechnicalDimensionScoring;
   };
   technical_dimensions?: TechnicalDimensionScoring;
+  embedding_relevance?: EmbeddingRelevanceData;
   summary: string;
   created_at: string;
 }
@@ -226,6 +243,77 @@ export default function FeedbackPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Explainable Embedding Relevance Scoring & Concept Gap Analysis */}
+              {report.embedding_relevance && (
+                <div className="p-6 sm:p-8 bg-muted/30 border-b border-border/70 space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 text-xs font-semibold">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        <span>Machine Learning Embedding Relevance Engine</span>
+                      </div>
+                      <h3 className="text-lg font-bold tracking-tight">Explainable Semantic Cosine Similarity & Concept Gaps</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {report.embedding_relevance.explanation}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4 bg-card p-3 rounded-xl border border-border/70 shadow-2xs">
+                      <div className="text-center px-2">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Semantic Match</span>
+                        <p className="text-lg font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                          {Math.round(report.embedding_relevance.averageSimilarity * 100)}%
+                        </p>
+                      </div>
+                      <div className="h-8 w-px bg-border" />
+                      <div className="text-center px-2">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Embedding Score</span>
+                        <p className="text-lg font-mono font-bold text-primary">
+                          {report.embedding_relevance.embeddingScore}/100
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Automated Concept Gap Analysis Grid */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Automated Concept Gap & Proximity Analysis</h4>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {report.embedding_relevance.concepts.map((c, i) => (
+                        <div
+                          key={i}
+                          className={cn(
+                            "p-3 rounded-xl border bg-card space-y-2 text-xs transition-all",
+                            c.covered ? "border-emerald-500/30 bg-emerald-500/[0.02]" : "border-amber-500/30 bg-amber-500/[0.02]"
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-foreground truncate max-w-[180px]" title={c.concept}>
+                              {c.concept}
+                            </span>
+                            <span className={cn(
+                              "px-2 py-0.5 rounded text-[10px] font-bold font-mono",
+                              c.covered ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                            )}>
+                              {c.covered ? "✓ Covered" : "⚠ Missing Gap"}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+                            <span>Cosine Proximity:</span>
+                            <span className="font-bold text-foreground">{(c.similarity * 100).toFixed(1)}%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-muted overflow-hidden rounded-full">
+                            <div
+                              className={cn("h-full rounded-full transition-all", c.covered ? "bg-emerald-500" : "bg-amber-500")}
+                              style={{ width: `${Math.min(100, Math.max(10, c.similarity * 100))}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Rubric Categories */}
               {categories.length > 0 && (

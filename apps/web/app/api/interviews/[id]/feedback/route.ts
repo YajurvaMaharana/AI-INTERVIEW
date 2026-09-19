@@ -9,9 +9,12 @@ import {
   getComprehensiveEvaluation,
 } from '@/lib/services/db.service';
 import { updateCandidateIntelligenceProfile } from '@/lib/services/candidate-profile.service';
+import { computeEmbeddingRelevance, type EmbeddingRelevanceResult } from '@/lib/services/ai-engine/embedding-relevance.service';
 import { GoogleGenAI } from '@google/genai';
 import { resolveGeminiModel, generateWithModelFallback } from '@/lib/utils/gemini-model';
 import type { JobDescriptionParsedData } from '@/lib/types/database.types';
+
+export const dynamic = 'force-dynamic';
 
 interface FeedbackScoreCategory {
   label: string;
@@ -72,6 +75,7 @@ interface FeedbackPayload {
   targeted_recommendations: string[];
   star_analysis: StarAnalysis;
   technical_dimensions: TechnicalDimensionScoring;
+  embedding_relevance?: EmbeddingRelevanceResult;
 }
 
 async function generateEvaluationReport(
@@ -85,6 +89,15 @@ async function generateEvaluationReport(
   const modelName = resolveGeminiModel();
 
   const userAnswers = messages.filter((m) => m.sender_role === 'user');
+  const candidateTexts = userAnswers.map((m) => m.content);
+
+  // 1. Compute Vector Embedding Relevance & Automated Concept Gap Analysis
+  const embeddingResult = await computeEmbeddingRelevance(
+    type,
+    candidateTexts,
+    85
+  );
+
   if (userAnswers.length === 0 || !messages || messages.length === 0) {
     return {
       overall_score: 0,
@@ -127,9 +140,12 @@ async function generateEvaluationReport(
           { dimension: "Role Alignment", score: 0, feedback: "No answers provided." }
         ],
         average_dimension_score: 0
-      }
+      },
+      embedding_relevance: embeddingResult,
     };
   }
+
+  let evaluatedPayload: FeedbackPayload | null = null;
 
   if (apiKey) {
     try {
@@ -231,104 +247,112 @@ Return ONLY a valid JSON object matching this exact TypeScript structure with no
       const parsed = JSON.parse(cleanJson);
 
       if (parsed.overall_score && Array.isArray(parsed.categories)) {
-        return parsed as FeedbackPayload;
+        evaluatedPayload = parsed as FeedbackPayload;
       }
     } catch (e: any) {
       console.info('[api/feedback] Using structured rubric fallback evaluation due to capacity/network:', e?.message || e);
     }
   }
 
-  // Graceful rubric-backed fallback evaluation with STAR analysis
-  const scoreBase = Math.min(92, Math.max(68, 76 + userAnswers.length * 3));
-  return {
-    overall_score: scoreBase,
-    summary: `Structured rubric evaluation for the ${role} (${difficulty}) position. Candidate demonstrated solid technical competence and clear articulation, with specific opportunities to deepen scalability discussions and quantify performance impact.`,
-    categories: [
-      {
-        label: 'Technical Proficiency & Accuracy',
-        score: scoreBase,
-        comment: `Demonstrated accurate foundational understanding of core competencies for ${role}.`,
-        rubric_level: scoreBase >= 85 ? 'Proficient' : 'Competent',
-        transcript_quote: userAnswers[0]?.content.slice(0, 100) || 'Candidate response transcript excerpt',
-        covered_concepts: ['Core architecture fundamentals', 'Domain terminology', 'Syntax correctness'],
-        missing_concepts: ['Advanced edge-case reconciliation', 'Scale-out partitioning strategies'],
-        rubric_justification: `Awarded ${scoreBase}/100 based on direct quote alignment and demonstrated foundational mastery.`,
-        evaluation_confidence: 94,
-      },
-      {
-        label: 'Communication & Clarity',
-        score: Math.min(95, scoreBase + 3),
-        comment: 'Ideas were communicated clearly and logically. Structuring behavioral responses using the STAR method will further enhance impact.',
-        rubric_level: 'Proficient',
-        transcript_quote: userAnswers[0]?.content.slice(0, 80) || 'Candidate articulation excerpt',
-        covered_concepts: ['Professional articulation', 'Logical sequence flow', 'Clear terminology'],
-        missing_concepts: ['Concise summary statement', 'Quantified impact framing'],
-        rubric_justification: 'Awarded score based on clear speech structure and professional phrasing in transcript.',
-        evaluation_confidence: 96,
-      },
-      {
-        label: 'Structured Reasoning & Trade-offs',
-        score: Math.max(65, scoreBase - 2),
-        comment: 'Good logical breakdown of problems. Proactively discussing failure modes and latency vs throughput trade-offs will elevate architectural responses.',
-        rubric_level: scoreBase >= 85 ? 'Competent' : 'Developing',
-        transcript_quote: userAnswers[1]?.content?.slice(0, 90) || userAnswers[0]?.content?.slice(0, 90) || 'Trade-off discussion excerpt',
-        covered_concepts: ['Problem breakdown', 'Logical sequencing'],
-        missing_concepts: ['Latency vs throughput profiling', 'Failure recovery simulation'],
-        rubric_justification: 'Awarded score reflecting sound reasoning with minor gaps in proactive failure mode analysis.',
-        evaluation_confidence: 92,
-      },
-    ],
-    evidence: userAnswers.map((a, idx) => ({
-      claim: `Response exchange #${idx + 1} engagement`,
-      transcriptQuote: a.content.slice(0, 90) + '...',
-      evaluation: 'Addressed core prompt effectively with relevant professional terminology.',
-    })),
-    missing_key_elements: [
-      'Explicit benchmarking against high-load edge cases',
-      'Quantified metrics regarding throughput or latency reduction',
-    ],
-    strengths: [
-      'Clear, professional communication style throughout the session',
-      `Solid foundational alignment with expectations for ${role}`,
-      'Constructive and calm demeanour when facing technical follow-ups',
-    ],
-    weaknesses: [
-      'Occasional omission of proactive failure-mode analysis',
-      'Limited quantitative metrics used to anchor past achievements',
-    ],
-    targeted_recommendations: [
-      'Incorporate specific metrics (e.g. latency reduced by X%, throughput increased by Y) when describing past projects',
-      'Walk through edge cases and failure modes proactively before being prompted by the interviewer',
-    ],
-    star_analysis: {
-      components: [
-        { component: "Situation", status: "strong", evidence: userAnswers[0]?.content.slice(0, 70) || "Context provided", feedback: "Clear framing of technical environment." },
-        { component: "Task", status: "strong", evidence: "Defined scope of responsibilities", feedback: "Clear objective established." },
-        { component: "Action", status: "partial", evidence: "Described individual technical implementation", feedback: "Strengthen focus on personal ownership ('I' instead of 'we')." },
-        { component: "Result", status: "missing", evidence: "No quantitative metrics provided", feedback: "Add concrete numbers (e.g. latency reduced by 40%) to close out the story." }
+  if (!evaluatedPayload) {
+    const scoreBase = Math.min(92, Math.max(68, 76 + userAnswers.length * 3));
+    evaluatedPayload = {
+      overall_score: scoreBase,
+      summary: `Structured rubric evaluation for the ${role} (${difficulty}) position. Candidate demonstrated solid technical competence and clear articulation, with specific opportunities to deepen scalability discussions and quantify performance impact.`,
+      categories: [
+        {
+          label: 'Technical Proficiency & Accuracy',
+          score: scoreBase,
+          comment: `Demonstrated accurate foundational understanding of core competencies for ${role}.`,
+          rubric_level: scoreBase >= 85 ? 'Proficient' : 'Competent',
+          transcript_quote: userAnswers[0]?.content.slice(0, 100) || 'Candidate response transcript excerpt',
+          covered_concepts: ['Core architecture fundamentals', 'Domain terminology', 'Syntax correctness'],
+          missing_concepts: ['Advanced edge-case reconciliation', 'Scale-out partitioning strategies'],
+          rubric_justification: `Awarded ${scoreBase}/100 based on direct quote alignment and demonstrated foundational mastery.`,
+          evaluation_confidence: 94,
+        },
+        {
+          label: 'Communication & Clarity',
+          score: Math.min(95, scoreBase + 3),
+          comment: 'Ideas were communicated clearly and logically. Structuring behavioral responses using the STAR method will further enhance impact.',
+          rubric_level: 'Proficient',
+          transcript_quote: userAnswers[0]?.content.slice(0, 80) || 'Candidate articulation excerpt',
+          covered_concepts: ['Professional articulation', 'Logical sequence flow', 'Clear terminology'],
+          missing_concepts: ['Concise summary statement', 'Quantified impact framing'],
+          rubric_justification: 'Awarded score based on clear speech structure and professional phrasing in transcript.',
+          evaluation_confidence: 96,
+        },
+        {
+          label: 'Structured Reasoning & Trade-offs',
+          score: Math.max(65, scoreBase - 2),
+          comment: 'Good logical breakdown of problems. Proactively discussing failure modes and latency vs throughput trade-offs will elevate architectural responses.',
+          rubric_level: scoreBase >= 85 ? 'Competent' : 'Developing',
+          transcript_quote: userAnswers[1]?.content?.slice(0, 90) || userAnswers[0]?.content?.slice(0, 90) || 'Trade-off discussion excerpt',
+          covered_concepts: ['Problem breakdown', 'Logical sequencing'],
+          missing_concepts: ['Latency vs throughput profiling', 'Failure recovery simulation'],
+          rubric_justification: 'Awarded score reflecting sound reasoning with minor gaps in proactive failure mode analysis.',
+          evaluation_confidence: 92,
+        },
       ],
-      quantitative_metrics_detected: false,
-      personal_ownership_score: 80,
-      self_reflection_score: 75,
-      missing_structural_gaps: [
-        "Result phase lacks quantified impact metrics",
-        "Action phase could emphasize stakeholder alignment"
-      ]
-    },
-    technical_dimensions: {
-      dimensions: [
-        { dimension: "Technical Correctness", score: scoreBase, feedback: "Sound technical fundamentals demonstrated." },
-        { dimension: "Domain Relevance", score: scoreBase - 2, feedback: "Good alignment with domain expectations." },
-        { dimension: "Conceptual Depth", score: scoreBase - 4, feedback: "Propose deeper exploration of underlying primitives." },
-        { dimension: "Logical Reasoning", score: scoreBase + 2, feedback: "Clear step-by-step logical breakdown." },
-        { dimension: "Concrete Examples", score: scoreBase - 6, feedback: "Incorporate production benchmarks or case studies." },
-        { dimension: "Architectural Trade-offs", score: scoreBase - 3, feedback: "Solid discussion of system design constraints." },
-        { dimension: "Communication Clarity", score: scoreBase + 4, feedback: "Professional, articulate, and well structured." },
-        { dimension: "Role Alignment", score: scoreBase, feedback: "Matches targeted seniority level well." }
+      evidence: userAnswers.map((a, idx) => ({
+        claim: `Response exchange #${idx + 1} engagement`,
+        transcriptQuote: a.content.slice(0, 90) + '...',
+        evaluation: 'Addressed core prompt effectively with relevant professional terminology.',
+      })),
+      missing_key_elements: [
+        'Explicit benchmarking against high-load edge cases',
+        'Quantified metrics regarding throughput or latency reduction',
       ],
-      average_dimension_score: scoreBase - 1
-    },
-  };
+      strengths: [
+        'Clear, professional communication style throughout the session',
+        `Solid foundational alignment with expectations for ${role}`,
+        'Constructive and calm demeanour when facing technical follow-ups',
+      ],
+      weaknesses: [
+        'Occasional omission of proactive failure-mode analysis',
+        'Limited quantitative metrics used to anchor past achievements',
+      ],
+      targeted_recommendations: [
+        'Incorporate specific metrics (e.g. latency reduced by X%, throughput increased by Y) when describing past projects',
+        'Walk through edge cases and failure modes proactively before being prompted by the interviewer',
+      ],
+      star_analysis: {
+        components: [
+          { component: "Situation", status: "strong", evidence: userAnswers[0]?.content.slice(0, 70) || "Context provided", feedback: "Clear framing of technical environment." },
+          { component: "Task", status: "strong", evidence: "Defined scope of responsibilities", feedback: "Clear objective established." },
+          { component: "Action", status: "partial", evidence: "Described individual technical implementation", feedback: "Strengthen focus on personal ownership ('I' instead of 'we')." },
+          { component: "Result", status: "missing", evidence: "No quantitative metrics provided", feedback: "Add concrete numbers (e.g. latency reduced by 40%) to close out the story." }
+        ],
+        quantitative_metrics_detected: false,
+        personal_ownership_score: 80,
+        self_reflection_score: 75,
+        missing_structural_gaps: [
+          "Result phase lacks quantified impact metrics",
+          "Action phase could emphasize stakeholder alignment"
+        ]
+      },
+      technical_dimensions: {
+        dimensions: [
+          { dimension: "Technical Correctness", score: scoreBase, feedback: "Sound technical fundamentals demonstrated." },
+          { dimension: "Domain Relevance", score: scoreBase - 2, feedback: "Good alignment with domain expectations." },
+          { dimension: "Conceptual Depth", score: scoreBase - 4, feedback: "Propose deeper exploration of underlying primitives." },
+          { dimension: "Logical Reasoning", score: scoreBase + 2, feedback: "Clear step-by-step logical breakdown." },
+          { dimension: "Concrete Examples", score: scoreBase - 6, feedback: "Incorporate production benchmarks or case studies." },
+          { dimension: "Architectural Trade-offs", score: scoreBase - 3, feedback: "Solid discussion of system design constraints." },
+          { dimension: "Communication Clarity", score: scoreBase + 4, feedback: "Professional, articulate, and well structured." },
+          { dimension: "Role Alignment", score: scoreBase, feedback: "Matches targeted seniority level well." }
+        ],
+        average_dimension_score: scoreBase - 1
+      },
+    };
+  }
+
+  // 2. Hybrid Scoring: Blend LLM overall score with Embedding Relevance sub-score
+  const hybridFinalScore = Math.round(0.60 * evaluatedPayload.overall_score + 0.40 * embeddingResult.hybridScore);
+  evaluatedPayload.overall_score = hybridFinalScore;
+  evaluatedPayload.embedding_relevance = embeddingResult;
+
+  return evaluatedPayload;
 }
 
 export async function GET(
