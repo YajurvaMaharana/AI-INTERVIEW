@@ -7,6 +7,7 @@ import {
   updateSession,
   saveComprehensiveEvaluation,
   getComprehensiveEvaluation,
+  calculatePeerPercentile,
 } from '@/lib/services/db.service';
 import { updateCandidateIntelligenceProfile } from '@/lib/services/candidate-profile.service';
 import { computeEmbeddingRelevance, type EmbeddingRelevanceResult } from '@/lib/services/ai-engine/embedding-relevance.service';
@@ -446,6 +447,7 @@ export async function GET(
 ) {
   try {
     const sessionId = params.id;
+    const session = await getSessionById(sessionId);
     const report = await getFeedbackBySessionId(sessionId);
     const comprehensive = await getComprehensiveEvaluation(sessionId);
 
@@ -456,8 +458,16 @@ export async function GET(
       );
     }
 
+    const score = report?.overall_score ?? 75;
+    const peerPercentile = await calculatePeerPercentile(
+      session?.role || 'Software Engineering',
+      session?.difficulty || 'medium',
+      Number(score)
+    );
+
     const enhancedReport = {
       ...(report || {}),
+      peer_percentile: peerPercentile,
       scores: {
         ...(report?.scores || {}),
         star_analysis: comprehensive?.star_analysis || (report?.scores as any)?.star_analysis,
@@ -496,8 +506,15 @@ export async function POST(
     const existing = await getFeedbackBySessionId(sessionId);
     const comprehensiveExisting = await getComprehensiveEvaluation(sessionId);
     if (existing || comprehensiveExisting) {
+      const score = existing?.overall_score ?? 75;
+      const peerPercentile = await calculatePeerPercentile(
+        session.role || 'Software Engineering',
+        session.difficulty || 'medium',
+        Number(score)
+      );
       const enhanced = {
         ...(existing || {}),
+        peer_percentile: peerPercentile,
         star_analysis: comprehensiveExisting?.star_analysis || (existing?.scores as any)?.star_analysis,
         technical_dimensions: comprehensiveExisting?.technical_scores || (existing?.scores as any)?.technical_dimensions,
       };
@@ -548,8 +565,15 @@ export async function POST(
       console.warn('[api/feedback] Failed to update candidate intelligence profile:', profErr);
     }
 
+    const peerPercentile = await calculatePeerPercentile(
+      session.role || 'Software Engineering',
+      session.difficulty || 'medium',
+      Number(evaluation.overall_score)
+    );
+
     const enhancedReport = {
       ...report,
+      peer_percentile: peerPercentile,
       star_analysis: evaluation.star_analysis,
       technical_dimensions: evaluation.technical_dimensions,
     };

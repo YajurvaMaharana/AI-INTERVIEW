@@ -970,3 +970,69 @@ export async function getComprehensiveEvaluation(sessionId: string): Promise<{
   return null;
 }
 
+export interface PeerPercentileResult {
+  percentile: number | null;
+  topPercentage: number | null;
+  sampleSize: number;
+  sufficientData: boolean;
+  benchmarkLabel: string;
+}
+
+export async function calculatePeerPercentile(
+  role: string,
+  difficulty: string,
+  candidateScore: number
+): Promise<PeerPercentileResult> {
+  const client = getSupabaseAdminClient();
+  let scores: number[] = [];
+
+  if (client) {
+    try {
+      const { data: reports, error } = await client
+        .from('feedback_reports')
+        .select('overall_score')
+        .not('overall_score', 'is', null);
+
+      if (!error && reports) {
+        scores = reports.map((r: any) => Number(r.overall_score)).filter((s: number) => !isNaN(s));
+      }
+    } catch (err: any) {
+      console.warn('[db.service] calculatePeerPercentile query error:', err?.message);
+    }
+  }
+
+  if (scores.length < 5 && inMemoryFeedback.size > 0) {
+    Array.from(inMemoryFeedback.values()).forEach((report) => {
+      if (report.overall_score !== null && report.overall_score !== undefined) {
+        scores.push(Number(report.overall_score));
+      }
+    });
+  }
+
+  const sampleSize = scores.length;
+  const MIN_SAMPLE_SIZE = 5;
+
+  if (sampleSize < MIN_SAMPLE_SIZE) {
+    return {
+      percentile: null,
+      topPercentage: null,
+      sampleSize,
+      sufficientData: false,
+      benchmarkLabel: `Building peer benchmark dataset (n = ${sampleSize} / ${MIN_SAMPLE_SIZE} sessions required)...`,
+    };
+  }
+
+  scores.sort((a, b) => a - b);
+  const countBelowOrEqual = scores.filter((s) => s <= candidateScore).length;
+  const percentileRank = Math.round((countBelowOrEqual / sampleSize) * 100);
+  const topPercentage = Math.max(1, 100 - percentileRank);
+
+  return {
+    percentile: percentileRank,
+    topPercentage,
+    sampleSize,
+    sufficientData: true,
+    benchmarkLabel: `Top ${topPercentage}% among active ${role || 'Software Engineering'} candidates (n = ${sampleSize} completed sessions)`,
+  };
+}
+

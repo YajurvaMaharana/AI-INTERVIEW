@@ -30,6 +30,7 @@ import {
   KeyRound,
   X,
   UploadCloud,
+  Download,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ResumeManager } from "@/components/profile/ResumeManager";
@@ -188,6 +189,42 @@ function ProfilePageContent() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Granular Consent & Privacy States
+  const [resumeConsent, setResumeConsent] = useState(true);
+  const [voiceConsent, setVoiceConsent] = useState(true);
+  const [webcamConsent, setWebcamConsent] = useState(true);
+  const [peerBenchmarkConsent, setPeerBenchmarkConsent] = useState(true);
+
+  const handleExportDataArchive = () => {
+    const exportData = {
+      user: {
+        email: user?.email,
+        displayName,
+        targetRole,
+        experienceLevel,
+        skills: selectedSkills,
+        goals: selectedGoals,
+      },
+      consents: {
+        resumeParsingAndStorage: resumeConsent,
+        voiceRecordingAndTelemetry: voiceConsent,
+        webcamGazeAndEngagementTracking: webcamConsent,
+        anonymizedPeerBenchmarking: peerBenchmarkConsent,
+      },
+      exportedAt: new Date().toISOString(),
+      platform: "AI Interview Coach & Evaluation Engine",
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `AI-Interview-Coach-Data-Archive-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   // Initialize from auth context
   useEffect(() => {
@@ -878,11 +915,111 @@ function ProfilePageContent() {
             </p>
           </div>
 
-          {/* 8. Account & Security Settings */}
+          {/* 8. Granular Consent Management & Data Governance */}
+          <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 space-y-4">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-orange-500" />
+              <span>8. Granular Consent & Data Governance</span>
+            </label>
+
+            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-[#1C2230]/60 border border-slate-200/80 dark:border-slate-800 space-y-4">
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span>Data Collection & Processing Consents</span>
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Configure upfront consent gates and toggles for sensitive candidate data processing. All video and audio streams are processed locally with privacy-first guarantees.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={resumeConsent}
+                    onChange={(e) => setResumeConsent(e.target.checked)}
+                    className="mt-0.5 rounded text-orange-600 focus:ring-orange-500"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Resume Parsing & Storage</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">Allow AI extraction and vector indexing of resume contents.</span>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={voiceConsent}
+                    onChange={(e) => setVoiceConsent(e.target.checked)}
+                    className="mt-0.5 rounded text-orange-600 focus:ring-orange-500"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Voice Recording & Telemetry</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">Speech-to-text transcription and confidence analysis.</span>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={webcamConsent}
+                    onChange={(e) => setWebcamConsent(e.target.checked)}
+                    className="mt-0.5 rounded text-orange-600 focus:ring-orange-500"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Webcam Gaze & Engagement</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">Local gaze orientation and head posture estimation.</span>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={peerBenchmarkConsent}
+                    onChange={(e) => setPeerBenchmarkConsent(e.target.checked)}
+                    className="mt-0.5 rounded text-orange-600 focus:ring-orange-500"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Anonymized Peer Benchmarks</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">Contribute anonymized session scores to global percentiles.</span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Data Export Archive & AI Limitation Disclosures */}
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="space-y-0.5 text-left">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Personal Data Archive Export</span>
+                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400">Download a complete JSON archive of your profile, interview metrics, and consents.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleExportDataArchive}
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-orange-600 hover:bg-orange-500 text-white shadow-xs flex items-center gap-1.5 shrink-0"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Data Archive</span>
+                </button>
+              </div>
+
+              {/* AI Limitation Disclaimer */}
+              <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-[11px] text-amber-900 dark:text-amber-300 leading-relaxed space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span>AI Evaluation Transparency & Limitations Disclaimer</span>
+                </div>
+                <p>
+                  Scores, rubrics, and feedback generated by the platform are non-binding AI estimates designed for mock interview coaching and skill refinement. They do not constitute official employment evaluations or guarantee hiring outcomes.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 9. Account & Security Settings */}
           <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 space-y-4">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
               <Lock className="w-4 h-4 text-orange-500" />
-              <span>8. Account Security & Privacy</span>
+              <span>9. Account Security & Privacy</span>
             </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

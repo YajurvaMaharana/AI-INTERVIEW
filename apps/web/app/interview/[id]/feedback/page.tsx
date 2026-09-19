@@ -17,6 +17,7 @@ import {
   Download,
   Eye,
   Video,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -113,6 +114,14 @@ interface SpeechDeliveryMetrics {
   constructiveFeedback: string[];
 }
 
+interface PeerPercentileInfo {
+  percentile: number | null;
+  topPercentage: number | null;
+  sampleSize: number;
+  sufficientData: boolean;
+  benchmarkLabel: string;
+}
+
 interface FeedbackReportData {
   id: string;
   session_id: string;
@@ -128,6 +137,7 @@ interface FeedbackReportData {
   answer_rewrites?: AnswerRewriteItem[];
   attempt_comparisons?: QuestionAttemptComparison[];
   speech_telemetry?: SpeechDeliveryMetrics;
+  peer_percentile?: PeerPercentileInfo;
   summary: string;
   created_at: string;
 }
@@ -336,6 +346,37 @@ export default function FeedbackPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Peer Percentile Benchmarking Card Section */}
+              {report.peer_percentile && (
+                <div className="px-6 py-4 bg-muted/20 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-foreground">
+                          Peer Percentile Benchmarking
+                        </span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-semibold">
+                          {report.peer_percentile.sufficientData ? "Verified Dataset" : "Building Dataset"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {report.peer_percentile.benchmarkLabel}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-sm font-bold font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/25">
+                      {report.peer_percentile.sufficientData
+                        ? `Top ${report.peer_percentile.topPercentage}% (${report.peer_percentile.percentile}th percentile)`
+                        : `Pending (n = ${report.peer_percentile.sampleSize}/5)`}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Explainable Embedding Relevance Scoring & Concept Gap Analysis */}
               {report.embedding_relevance && (
