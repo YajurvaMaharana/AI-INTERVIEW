@@ -226,6 +226,26 @@ function ProfilePageContent() {
     URL.revokeObjectURL(url);
   };
 
+  const [harnessRunning, setHarnessRunning] = useState(false);
+  const [harnessReport, setHarnessReport] = useState<any>(null);
+
+  const handleRunHarness = async () => {
+    setHarnessRunning(true);
+    try {
+      const res = await fetch("/api/interviews/harness/run");
+      const data = await res.json();
+      if (data.success && data.report) {
+        setHarnessReport(data.report);
+      } else {
+        alert(data.error || "Failed to run evaluation harness");
+      }
+    } catch (err: any) {
+      alert("Network error while running evaluation harness");
+    } finally {
+      setHarnessRunning(false);
+    }
+  };
+
   // Initialize from auth context
   useEffect(() => {
     if (user) {
@@ -1015,7 +1035,85 @@ function ProfilePageContent() {
             </div>
           </div>
 
-          {/* 9. Account & Security Settings */}
+          {/* 9. Evaluation Quality & Automated Test Harness */}
+          <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 space-y-4">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <Terminal className="w-4 h-4 text-orange-500" />
+              <span>9. Evaluation Quality & Automated Test Harness</span>
+            </label>
+
+            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-[#1C2230]/60 border border-slate-200/80 dark:border-slate-800 space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>Benchmark Repository & Regression Suite</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
+                    Run automated integration checks against curated benchmark test cases (technical & behavioral), verifying schema validity, score spread consistency, and deterministic branching behavior.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRunHarness}
+                  disabled={harnessRunning}
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs flex items-center gap-2 shrink-0 disabled:opacity-50"
+                >
+                  {harnessRunning ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Running Suite...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bot className="w-3.5 h-3.5" />
+                      <span>Run Test Harness</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {harnessReport && (
+                <div className="mt-4 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in duration-200">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800 text-xs">
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-slate-800 dark:text-slate-200">Execution Summary:</span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                        {harnessReport.successRate}% Passed ({harnessReport.passCount}/{harnessReport.totalTests})
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
+                      <span>Deterministic Consistency: <strong className="text-slate-800 dark:text-slate-200">{harnessReport.deterministicConsistencyScore}%</strong></span>
+                      <span>•</span>
+                      <span>{new Date(harnessReport.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1">
+                    {harnessReport.results.map((res: any, idx: number) => (
+                      <div key={idx} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold font-mono text-indigo-600 dark:text-indigo-400">{res.testId}</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${res.overallPassed ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
+                            {res.overallPassed ? 'PASSED' : 'FAILED'}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-600 dark:text-slate-300 font-medium truncate">{res.topic}</div>
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-mono pt-1 border-t border-slate-200/60 dark:border-slate-700">
+                          <span>Weak Score: {res.weakResult.score} ({res.weakResult.branchDecision})</span>
+                          <span>Strong Score: {res.strongResult.score} ({res.strongResult.branchDecision})</span>
+                        </div>
+                        {res.error && (
+                          <div className="text-[10px] text-rose-500 bg-rose-500/10 p-1.5 rounded">{res.error}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 10. Account & Security Settings */}
           <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 space-y-4">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
               <Lock className="w-4 h-4 text-orange-500" />

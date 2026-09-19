@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { parseJobDescription } from '@/lib/services/jd-parser.service';
 import { createClient } from '@/lib/supabase/server';
 import { syncUserToDatabase } from '@/lib/services/db.service';
+import { validateUploadedFile, sanitizeUntrustedText } from '@/lib/utils/sanitization';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,23 +22,28 @@ export async function POST(req: Request) {
       const textParam = formData.get('rawText') as string | null;
 
       if (textParam) {
-        rawText = textParam;
+        rawText = sanitizeUntrustedText(textParam);
       }
 
       if (file && file.size > 0) {
+        const validation = validateUploadedFile(file);
+        if (!validation.valid) {
+          return NextResponse.json({ error: validation.error }, { status: 400 });
+        }
+
         filename = file.name;
         mimeType = file.type;
         const arrayBuffer = await file.arrayBuffer();
         fileBuffer = Buffer.from(arrayBuffer);
 
-        // If it's a plain text file, extract text directly
+        // If it's a plain text file, extract text directly with sanitization
         if (mimeType.includes('text/plain') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-          rawText = fileBuffer.toString('utf-8');
+          rawText = sanitizeUntrustedText(fileBuffer.toString('utf-8'));
         }
       }
     } else {
       const jsonBody = await req.json().catch(() => ({}));
-      rawText = jsonBody.rawText || '';
+      rawText = sanitizeUntrustedText(jsonBody.rawText || '');
     }
 
     if (!rawText.trim() && !fileBuffer) {

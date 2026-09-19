@@ -4,6 +4,7 @@ import {
   uploadResumeToStorage,
 } from '@/lib/services/resume-parser.service';
 import { updateUser, getUserById, syncUserToDatabase } from '@/lib/services/db.service';
+import { validateUploadedFile, sanitizeUntrustedText } from '@/lib/utils/sanitization';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -27,21 +28,32 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'No file provided' }, { status: 400 });
       }
 
+      const validation = validateUploadedFile(file);
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error }, { status: 400 });
+      }
+
       fileName = file.name || 'Resume.pdf';
       const arrayBuffer = await file.arrayBuffer();
       fileBuffer = Buffer.from(arrayBuffer);
       base64Data = fileBuffer.toString('base64');
       isPdf = file.type === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf');
+      if (!isPdf) {
+        rawText = sanitizeUntrustedText(fileBuffer.toString('utf-8'));
+      }
     } else {
       const json = await request.json();
       userId = json.userId || '';
       fileName = json.filename || json.fileName || 'Resume.pdf';
       base64Data = json.base64 || '';
-      rawText = json.rawText || '';
+      rawText = sanitizeUntrustedText(json.rawText || '');
       isPdf = json.isPdf !== undefined ? json.isPdf : true;
 
       if (base64Data) {
-        // Strip data URI prefix if present
+        const validation = validateUploadedFile({ name: fileName, size: base64Data.length * 0.75, type: isPdf ? 'application/pdf' : 'text/plain' });
+        if (!validation.valid) {
+          return NextResponse.json({ error: validation.error }, { status: 400 });
+        }
         const cleanedBase64 = base64Data.replace(/^data:[^;]+;base64,/, '');
         fileBuffer = Buffer.from(cleanedBase64, 'base64');
         base64Data = cleanedBase64;
