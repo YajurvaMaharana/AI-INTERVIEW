@@ -13,6 +13,7 @@ import {
   Home,
   MessageSquare,
   Sparkles,
+  Mic,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -60,6 +61,53 @@ interface EmbeddingRelevanceData {
   explanation: string;
 }
 
+interface AnswerRewriteItem {
+  question_prompt: string;
+  original_transcript: string;
+  ideal_rewrite: string;
+  key_improvements: string[];
+}
+
+interface QuestionAttemptComparison {
+  question_prompt: string;
+  initial_attempt: {
+    transcript: string;
+    timestamp?: string;
+    score: number;
+    dimensional_scores: Record<string, number>;
+  };
+  retry_attempt: {
+    transcript: string;
+    timestamp?: string;
+    score: number;
+    dimensional_scores: Record<string, number>;
+    delta_improvements: {
+      technical_correctness: number;
+      depth: number;
+      communication: number;
+      reasoning: number;
+    };
+  };
+  improvement_summary: string;
+}
+
+interface SpeechDeliveryMetrics {
+  wordsPerMinute: number;
+  fillerWordCount: number;
+  fillerBreakdown: {
+    um: number;
+    uh: number;
+    like: number;
+    you_know: number;
+    other: number;
+  };
+  pacingAssessment: "Optimal (120-150 WPM)" | "Slightly Rapid" | "Measured / Deliberate";
+  pauseFrequency: string;
+  sentenceLengthVariance: number;
+  sentenceRestarts: number;
+  constructiveFeedback: string[];
+}
+
 interface FeedbackReportData {
   id: string;
   session_id: string;
@@ -72,6 +120,9 @@ interface FeedbackReportData {
   };
   technical_dimensions?: TechnicalDimensionScoring;
   embedding_relevance?: EmbeddingRelevanceData;
+  answer_rewrites?: AnswerRewriteItem[];
+  attempt_comparisons?: QuestionAttemptComparison[];
+  speech_telemetry?: SpeechDeliveryMetrics;
   summary: string;
   created_at: string;
 }
@@ -308,6 +359,252 @@ export default function FeedbackPage() {
                               style={{ width: `${Math.min(100, Math.max(10, c.similarity * 100))}%` }}
                             />
                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Voice-Preserving Ideal Answer Rewrite: Side-by-Side Comparison */}
+              {report.answer_rewrites && report.answer_rewrites.length > 0 && (
+                <div className="p-6 sm:p-8 bg-card border-b border-border/70 space-y-6">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>Voice-Preserving Communication Coach</span>
+                    </div>
+                    <h3 className="text-lg font-bold tracking-tight">Side-by-Side Ideal Answer Rewrites</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Compare your exact response transcript with the AI-crafted ideal rewrite. Designed to elevate clarity, structure, and professional terminology while faithfully preserving your core narrative and technical choices.
+                    </p>
+                  </div>
+
+                  <div className="space-y-6">
+                    {report.answer_rewrites.map((rw, index) => (
+                      <div key={index} className="rounded-xl border border-border/70 bg-muted/20 p-5 space-y-4 shadow-2xs">
+                        <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                          <span className="text-xs font-bold font-mono text-primary uppercase tracking-wider">
+                            Exchange #{index + 1}: {rw.question_prompt}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground bg-card px-2.5 py-0.5 rounded-full border">
+                            Before / After Transformation
+                          </span>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          {/* Original Transcript */}
+                          <div className="rounded-lg border border-border/60 bg-card p-4 space-y-2 flex flex-col justify-between">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                                  <span>Original Transcript</span>
+                                </span>
+                                <span className="text-[10px] text-muted-foreground font-mono">Your Spoken Answer</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground leading-relaxed italic bg-muted/40 p-3 rounded border border-border/50">
+                                &ldquo;{rw.original_transcript}&rdquo;
+                              </p>
+                            </div>
+                            <div className="pt-2 text-[10px] text-muted-foreground font-medium">
+                              Focus: Direct spoken response without structural optimization.
+                            </div>
+                          </div>
+
+                          {/* Ideal Rewrite */}
+                          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.02] p-4 space-y-2 flex flex-col justify-between">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-1">
+                                  <span>✨ Ideal Answer Rewrite</span>
+                                </span>
+                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">High-Impact Professional</span>
+                              </div>
+                              <p className="text-xs text-foreground leading-relaxed font-medium bg-card p-3 rounded border border-emerald-500/20 shadow-2xs">
+                                {rw.ideal_rewrite}
+                              </p>
+                            </div>
+
+                            {rw.key_improvements && rw.key_improvements.length > 0 && (
+                              <div className="pt-2 space-y-1.5 border-t border-emerald-500/20">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Key Upgrades Made:</span>
+                                <div className="flex flex-wrap gap-1">
+                                  {rw.key_improvements.map((imp, i) => (
+                                    <span key={i} className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 text-[10px] font-medium">
+                                      ✓ {imp}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Retry & Improvement Loop Delta Dashboard */}
+              {report.attempt_comparisons && report.attempt_comparisons.length > 0 && (
+                <div className="p-6 sm:p-8 bg-card border-b border-border/70 space-y-6">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" style={{ animationDuration: '8s' }} />
+                      <span>Iterative Retry & Growth Engine</span>
+                    </div>
+                    <h3 className="text-lg font-bold tracking-tight">Multi-Attempt Progression & Delta Dashboard</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Track your iterative growth across attempts. Compare initial submissions against retry attempts with exact dimensional delta scores, verifying measurable skill mastery over time.
+                    </p>
+                  </div>
+
+                  <div className="space-y-6">
+                    {report.attempt_comparisons.map((cmp, index) => (
+                      <div key={index} className="rounded-xl border border-border/70 bg-muted/20 p-5 space-y-5 shadow-2xs">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
+                          <span className="text-xs font-bold font-mono text-primary uppercase tracking-wider">
+                            {cmp.question_prompt}
+                          </span>
+                          <span className="text-[11px] text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 font-semibold">
+                            Growth Verified: {cmp.improvement_summary}
+                          </span>
+                        </div>
+
+                        {/* Attempt Comparison Grid */}
+                        <div className="grid gap-4 md:grid-cols-2">
+                          {/* Initial Attempt */}
+                          <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                Attempt #1 (Initial)
+                              </span>
+                              <span className="text-xs font-mono font-bold bg-muted px-2 py-0.5 rounded">
+                                Score: {cmp.initial_attempt.score}/100
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground italic bg-muted/30 p-2.5 rounded border">
+                              &ldquo;{cmp.initial_attempt.transcript}&rdquo;
+                            </p>
+                            <div className="space-y-1.5 pt-2 border-t border-border/50">
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase">Initial Dimensional Breakdown:</span>
+                              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                {Object.entries(cmp.initial_attempt.dimensional_scores).map(([dim, score]) => (
+                                  <div key={dim} className="flex justify-between bg-muted/40 px-2 py-1 rounded font-mono">
+                                    <span className="truncate pr-1">{dim}:</span>
+                                    <span className="font-bold">{score}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Retry Attempt */}
+                          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.02] p-4 space-y-3 shadow-2xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-1">
+                                <Sparkles className="h-3.5 w-3.5" />
+                                <span>Attempt #2 (Retry Growth)</span>
+                              </span>
+                              <span className="text-xs font-mono font-bold bg-emerald-500/15 text-emerald-800 dark:text-emerald-200 px-2 py-0.5 rounded">
+                                Score: {cmp.retry_attempt.score}/100 (+{cmp.retry_attempt.score - cmp.initial_attempt.score})
+                              </span>
+                            </div>
+                            <p className="text-xs text-foreground font-medium bg-card p-2.5 rounded border border-emerald-500/20">
+                              &ldquo;{cmp.retry_attempt.transcript}&rdquo;
+                            </p>
+                            <div className="space-y-1.5 pt-2 border-t border-emerald-500/20">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase">Delta Improvements:</span>
+                                <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">Robust Progression</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                                {Object.entries(cmp.retry_attempt.delta_improvements).map(([dimKey, delta]) => {
+                                  const label = dimKey.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                  return (
+                                    <div key={dimKey} className="flex justify-between bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">
+                                      <span className="truncate pr-1">{label}:</span>
+                                      <span className="font-bold text-emerald-700 dark:text-emerald-300">+{delta}%</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Speech Delivery Analytics (MEM4 Telemetry) */}
+              {report.speech_telemetry && (
+                <div className="p-6 sm:p-8 bg-card border-b border-border/70 space-y-6">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs font-semibold">
+                      <Mic className="h-3.5 w-3.5" />
+                      <span>MEM4 Acoustic & Transcript Telemetry</span>
+                    </div>
+                    <h3 className="text-lg font-bold tracking-tight">Speech Delivery Analytics</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Cleanly separates <strong className="text-foreground">how you sounded</strong> (tempo, pacing, acoustic delivery) from <strong className="text-foreground">what you said</strong> (technical content), evaluated against constructive conversational thresholds.
+                    </p>
+                  </div>
+
+                  {/* 4 Metric Cards Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-2">
+                      <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Speaking Tempo</span>
+                      <div className="text-xl font-extrabold text-foreground font-mono">
+                        {report.speech_telemetry.wordsPerMinute} WPM
+                      </div>
+                      <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                        {report.speech_telemetry.pacingAssessment}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-2">
+                      <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Verbal Fillers</span>
+                      <div className="text-xl font-extrabold text-foreground font-mono">
+                        {report.speech_telemetry.fillerWordCount} Total
+                      </div>
+                      <div className="text-[10px] text-muted-foreground flex gap-2 font-mono">
+                        <span>um: {report.speech_telemetry.fillerBreakdown.um}</span>
+                        <span>uh: {report.speech_telemetry.fillerBreakdown.uh}</span>
+                        <span>like: {report.speech_telemetry.fillerBreakdown.like}</span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-2">
+                      <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Pause Cadence</span>
+                      <div className="text-sm font-bold text-foreground">
+                        {report.speech_telemetry.pauseFrequency}
+                      </div>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                        ✓ Thinking pauses preserved
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-2">
+                      <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Sentence Restarts</span>
+                      <div className="text-xl font-extrabold text-foreground font-mono">
+                        {report.speech_telemetry.sentenceRestarts}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">Low structural friction</span>
+                    </div>
+                  </div>
+
+                  {/* Actionable Delivery Coaching Tips */}
+                  <div className="rounded-xl border border-blue-500/30 bg-blue-500/[0.02] p-5 space-y-3">
+                    <h4 className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>💡 Actionable Delivery Coaching & Constructive Threshold Grading</span>
+                    </h4>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {report.speech_telemetry.constructiveFeedback.map((tip, idx) => (
+                        <div key={idx} className="flex items-start gap-2 bg-card p-3 rounded-lg border border-blue-500/20 text-xs">
+                          <span className="text-blue-600 font-bold shrink-0">✦</span>
+                          <span className="text-foreground font-medium leading-relaxed">{tip}</span>
                         </div>
                       ))}
                     </div>

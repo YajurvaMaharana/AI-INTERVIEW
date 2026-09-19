@@ -18,6 +18,8 @@ import SkillReadinessRadar from "@/components/dashboard/SkillReadinessRadar";
 import CompetencyGrowthLineChart from "@/components/dashboard/CompetencyGrowthLineChart";
 import DeliveryTelemetry from "@/components/dashboard/DeliveryTelemetry";
 import AnswerRewriteCard from "@/components/dashboard/AnswerRewriteCard";
+import NextPracticeModule from "@/components/dashboard/NextPracticeModule";
+import WeaknessHeatmapCard from "@/components/dashboard/WeaknessHeatmapCard";
 import { useAuth } from "@/context/AuthContext";
 
 interface AscendXDashboardProps {
@@ -243,6 +245,9 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
                 <CompetencyGrowthLineChart />
               </div>
             </div>
+
+            {/* Longitudinal Weakness Heatmap & Skill Matrix */}
+            <WeaknessHeatmapCard />
           </div>
 
           {/* ========================================================= */}
@@ -278,6 +283,9 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
             <AnswerRewriteCard
               onPracticeAgain={() => router.push(`/interview/new?persona=${selectedPersona}`)}
             />
+
+            {/* Personalized Next-Practice Recommendations Engine */}
+            <NextPracticeModule />
           </div>
         </div>
 

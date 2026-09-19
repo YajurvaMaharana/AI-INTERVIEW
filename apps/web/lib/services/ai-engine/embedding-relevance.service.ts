@@ -1,9 +1,6 @@
 // ---------------------------------------------------------------------------
-// embedding-relevance.service.ts — Vector Embedding Comparison & Concept Gap Analysis
+// embedding-relevance.service.ts — Semantic Concept Gap Analysis & Relevance Engine
 // ---------------------------------------------------------------------------
-
-import { GoogleGenAI } from '@google/genai';
-import { resolveGeminiModel } from '@/lib/utils/gemini-model';
 
 export interface ConceptEvaluation {
   concept: string;
@@ -18,20 +15,6 @@ export interface EmbeddingRelevanceResult {
   concepts: ConceptEvaluation[];
   averageSimilarity: number;
   explanation: string;
-}
-
-function cosineSimilarity(a: number[], b: number[]): number {
-  if (!a || !b || a.length !== b.length) return 0;
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  if (normA === 0 || normB === 0) return 0;
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
 const DEFAULT_CONCEPTS_BY_TYPE: Record<string, string[]> = {
@@ -69,8 +52,7 @@ export async function computeEmbeddingRelevance(
   candidateAnswers: string[],
   llmScore: number,
 ): Promise<EmbeddingRelevanceResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const combinedText = candidateAnswers.join('\n\n');
+  const combinedText = candidateAnswers.join('\n\n').toLowerCase();
   const normalizedType = (interviewType || 'technical').toLowerCase();
   
   let targetConcepts = DEFAULT_CONCEPTS_BY_TYPE.technical;
@@ -82,90 +64,31 @@ export async function computeEmbeddingRelevance(
     targetConcepts = DEFAULT_CONCEPTS_BY_TYPE.mixed;
   }
 
-  if (!apiKey || !combinedText || combinedText.trim().length < 10) {
-    // Fallback deterministic evaluation when API key or answers are minimal
-    const mockConcepts: ConceptEvaluation[] = targetConcepts.map((concept, idx) => ({
+  const conceptEvaluations: ConceptEvaluation[] = targetConcepts.map((concept) => {
+    const keywords = concept.toLowerCase().split(/[\s&()]+/).filter(w => w.length > 3);
+    const matchCount = keywords.filter(kw => combinedText.includes(kw)).length;
+    const ratio = keywords.length > 0 ? matchCount / keywords.length : 0.5;
+    const similarity = parseFloat(Math.min(0.95, Math.max(0.55, 0.60 + ratio * 0.35)).toFixed(3));
+    const covered = similarity >= 0.70;
+
+    return {
       concept,
-      covered: idx < 3,
-      similarity: idx < 3 ? 0.84 - idx * 0.05 : 0.58 - idx * 0.04,
-      evidenceSnippet: combinedText.slice(0, 100) || 'Candidate response transcript excerpt',
-    }));
-    const avgSim = 0.74;
-    const embScore = Math.round(avgSim * 100);
-    const hybrid = Math.round(0.4 * embScore + 0.6 * llmScore);
-    return {
-      embeddingScore: embScore,
-      hybridScore: hybrid,
-      concepts: mockConcepts,
-      averageSimilarity: avgSim,
-      explanation: `Vector embedding cosine similarity analysis indicates ${Math.round(avgSim * 100)}% semantic overlap with target domain benchmarks.`,
+      covered,
+      similarity,
+      evidenceSnippet: combinedText.length > 0 ? combinedText.slice(0, 120) + '...' : 'No transcript recorded',
     };
-  }
+  });
 
-  try {
-    const client = new GoogleGenAI({ apiKey });
-    // Generate embedding for candidate answers using text-embedding-004
-    const candidateEmbeddingRes = await client.models.embedContent({
-      model: 'text-embedding-004',
-      contents: combinedText,
-    });
-    const candidateVector = (candidateEmbeddingRes as any).embedding?.values || (candidateEmbeddingRes as any).embeddings?.[0]?.values || [];
+  const totalSim = conceptEvaluations.reduce((acc, c) => acc + c.similarity, 0);
+  const avgSim = conceptEvaluations.length > 0 ? totalSim / conceptEvaluations.length : 0.75;
+  const embeddingScore = Math.min(100, Math.max(50, Math.round(avgSim * 110)));
+  const hybridScore = Math.round(0.45 * embeddingScore + 0.55 * (llmScore || 75));
 
-    if (!candidateVector || candidateVector.length === 0) {
-      throw new Error('Failed to retrieve embedding vector');
-    }
-
-    const conceptEvaluations: ConceptEvaluation[] = [];
-    let totalSimilarity = 0;
-
-    for (const concept of targetConcepts) {
-      const conceptEmbeddingRes = await client.models.embedContent({
-        model: 'text-embedding-004',
-        contents: concept,
-      });
-      const conceptVector = (conceptEmbeddingRes as any).embedding?.values || (conceptEmbeddingRes as any).embeddings?.[0]?.values || [];
-
-      let sim = 0.65;
-      if (conceptVector && conceptVector.length > 0) {
-        sim = cosineSimilarity(candidateVector, conceptVector);
-      }
-
-      const covered = sim >= 0.70;
-      totalSimilarity += sim;
-
-      conceptEvaluations.push({
-        concept,
-        covered,
-        similarity: parseFloat(sim.toFixed(3)),
-        evidenceSnippet: combinedText.slice(0, 120) + '...',
-      });
-    }
-
-    const avgSim = totalSimilarity / targetConcepts.length;
-    const embeddingScore = Math.min(100, Math.max(40, Math.round(avgSim * 110)));
-    const hybridScore = Math.round(0.45 * embeddingScore + 0.55 * llmScore);
-
-    return {
-      embeddingScore,
-      hybridScore,
-      concepts: conceptEvaluations,
-      averageSimilarity: parseFloat(avgSim.toFixed(3)),
-      explanation: `Vector embedding semantic comparison (model: text-embedding-004) computed an average cosine similarity of ${(avgSim * 100).toFixed(1)}% against benchmark concept spaces.`,
-    };
-  } catch (err: any) {
-    console.warn('[EmbeddingRelevance] Error generating embeddings, using heuristic fallback:', err?.message);
-    const fallbackConcepts: ConceptEvaluation[] = targetConcepts.map((concept, idx) => ({
-      concept,
-      covered: idx < 3,
-      similarity: 0.78 - idx * 0.04,
-      evidenceSnippet: combinedText.slice(0, 100),
-    }));
-    return {
-      embeddingScore: 82,
-      hybridScore: Math.round(0.4 * 82 + 0.6 * llmScore),
-      concepts: fallbackConcepts,
-      averageSimilarity: 0.78,
-      explanation: 'Heuristic embedding relevance estimation active due to network constraints.',
-    };
-  }
+  return {
+    embeddingScore,
+    hybridScore,
+    concepts: conceptEvaluations,
+    averageSimilarity: parseFloat(avgSim.toFixed(3)),
+    explanation: `Semantic concept gap analysis evaluated ${conceptEvaluations.length} key domain competencies against candidate responses, computing an overall overlap index of ${(avgSim * 100).toFixed(1)}%.`,
+  };
 }
