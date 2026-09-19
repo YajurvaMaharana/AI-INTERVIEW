@@ -30,6 +30,10 @@ export interface TranscriptionResult {
   fillerWordsFound: string[];
   estimatedWpm: number;
   modelUsed: string;
+  confidenceScore: number;
+  qualityStatus: "optimal" | "low_confidence" | "silent" | "corrupted";
+  qualityMessage?: string;
+  isProtectedFromLowScore: boolean;
 }
 
 const FILLER_WORDS_REGEX = /\b(um|uh|er|ah|like|you know|basically|actually|literally|so yeah|kind of|sort of)\b/gi;
@@ -45,11 +49,40 @@ export function analyzeSpeechMetrics(text: string, durationSeconds: number = 0) 
   const effectiveDurationMinutes = durationSeconds > 0 ? durationSeconds / 60 : wordCount / 140;
   const estimatedWpm = effectiveDurationMinutes > 0 ? Math.round(wordCount / effectiveDurationMinutes) : 0;
 
+  // Quality gate calculation
+  let confidenceScore = 95;
+  let qualityStatus: "optimal" | "low_confidence" | "silent" | "corrupted" = "optimal";
+  let qualityMessage = "Audio and transcription quality verified successfully.";
+  let isProtectedFromLowScore = false;
+
+  if (wordCount === 0 && durationSeconds > 2) {
+    confidenceScore = 15;
+    qualityStatus = "silent";
+    qualityMessage = "Excessive background silence or no speech detected. Please speak closer to your microphone.";
+    isProtectedFromLowScore = true;
+  } else if (durationSeconds > 5 && wordCount < 4) {
+    confidenceScore = 45;
+    qualityStatus = "low_confidence";
+    qualityMessage = "Low speech density detected. Transcription confidence is low.";
+    isProtectedFromLowScore = true;
+  } else if (text.includes("[inaudible]") || text.length < 3 && durationSeconds > 3) {
+    confidenceScore = 30;
+    qualityStatus = "corrupted";
+    qualityMessage = "Audio stream appears corrupted or unintelligible.";
+    isProtectedFromLowScore = true;
+  } else if (confidenceScore < 70) {
+    isProtectedFromLowScore = true;
+  }
+
   return {
     wordCount,
     fillerWordsCount,
     fillerWordsFound,
     estimatedWpm,
+    confidenceScore,
+    qualityStatus,
+    qualityMessage,
+    isProtectedFromLowScore,
   };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -20,6 +20,9 @@ import DeliveryTelemetry from "@/components/dashboard/DeliveryTelemetry";
 import AnswerRewriteCard from "@/components/dashboard/AnswerRewriteCard";
 import NextPracticeModule from "@/components/dashboard/NextPracticeModule";
 import WeaknessHeatmapCard from "@/components/dashboard/WeaknessHeatmapCard";
+import ReadinessScoreWidget from "@/components/dashboard/ReadinessScoreWidget";
+import DailyDrillWidget from "@/components/dashboard/DailyDrillWidget";
+import AsyncCoachNotesCard from "@/components/dashboard/AsyncCoachNotesCard";
 import { useAuth } from "@/context/AuthContext";
 
 interface AscendXDashboardProps {
@@ -45,6 +48,22 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
   const [isAdaptiveOn, setIsAdaptiveOn] = useState(true);
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="w-full min-h-[calc(100vh-5rem)] bg-[#ECEEF2] dark:bg-[#0B0F15] py-12 px-4 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 rounded-full border-2 border-[#E87A42] border-t-transparent animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-slate-500">Loading AI Interview Studio...</p>
+        </div>
+      </div>
+    );
+  }
 
   // User display name
   const userDisplayName = user?.email ? user.email.split("@")[0] : "[User]";
@@ -246,8 +265,17 @@ export default function AscendXDashboard({ initialSessions = [] }: AscendXDashbo
               </div>
             </div>
 
+            {/* Multi-Axis Readiness Score Widget */}
+            <ReadinessScoreWidget />
+
+            {/* Daily Five-Minute Drill Feature */}
+            <DailyDrillWidget />
+
             {/* Longitudinal Weakness Heatmap & Skill Matrix */}
             <WeaknessHeatmapCard />
+
+            {/* Async Coach Notes Between Sessions */}
+            <AsyncCoachNotesCard />
           </div>
 
           {/* ========================================================= */}
